@@ -1,76 +1,21 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#0b1220">
-  <title>Doctor Leave Planner — Demo</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div class="app-shell">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">+</div>
-        <div>
-          <div class="brand-name">LeavePilot</div>
-          <div class="brand-sub">Doctor planner · Demo</div>
-        </div>
-      </div>
-
-      <nav class="nav">
-        <button class="nav-item active" data-view="dashboard"><span>⌂</span> Dashboard</button>
-        <button class="nav-item" data-view="calendar"><span>▦</span> Calendar</button>
-        <button class="nav-item" data-view="planner"><span>✦</span> Plan leave</button>
-        <button class="nav-item" data-view="history"><span>↺</span> History</button>
-        <button class="nav-item" data-view="rules"><span>☷</span> Leave rules</button>
-      </nav>
-
-      <div class="sidebar-bottom">
-        <div class="mini-status">
-          <span class="status-dot"></span>
-          Demo data · stored locally
-        </div>
-        <button id="resetDemo" class="ghost-button">Reset demo</button>
-      </div>
-    </aside>
-
-    <main class="main">
-      <header class="topbar">
-        <div>
-          <div class="eyebrow">PERSONAL DUTY & LEAVE PLANNER</div>
-          <h1 id="pageTitle">Good evening, Dr. Jacob</h1>
-        </div>
-        <div class="top-actions">
-          <button class="icon-button" id="todayBtn" title="Go to today">Today</button>
-          <button class="avatar" title="Demo doctor">A</button>
-        </div>
-      </header>
-
-      <section id="alerts" class="alert-stack"></section>
-
-      <section id="view-dashboard" class="view active"></section>
-      <section id="view-calendar" class="view"></section>
-      <section id="view-planner" class="view"></section>
-      <section id="view-history" class="view"></section>
-      <section id="view-rules" class="view"></section>
-    </main>
-  </div>
-
-  <div id="modal" class="modal hidden" aria-hidden="true">
-    <div class="modal-backdrop"></div>
-    <div class="modal-card">
-      <div class="modal-head">
-        <div>
-          <div class="eyebrow" id="modalEyebrow">DATE</div>
-          <h2 id="modalTitle">20 September 2026</h2>
-        </div>
-        <button id="closeModal" class="icon-button">×</button>
-      </div>
-      <div id="modalBody"></div>
-    </div>
-  </div>
-
-  <script src="app.js"></script>
-</body>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b1220" />
+    <meta
+      name="description"
+      content="DocTrack is an offline-first leave planner, duty roster and NMC attendance tracker for doctors. All data stays on this device."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <title>DocTrack — Doctor Leave Planner</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <noscript>DocTrack needs JavaScript enabled because all calculations run on this device.</noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>

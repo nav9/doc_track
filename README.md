@@ -8,8 +8,8 @@ consequences, tracks NMC attendance, and produces a monthly A4 duty roster PDF.
 Everything is stored in the browser's IndexedDB. There is no account, server,
 analytics, telemetry or external personal-data request.
 
-**Phase 1 status:** implemented and verified by type check, 151 Vitest tests,
-5 Playwright browser journeys and a production build. Multi User planning is
+**Phase 1 status:** implemented and verified by type check, 152 Vitest tests,
+8 Playwright browser journeys and a production build. Multi User planning is
 local-first; authenticated multi-device sync and an HOD approval queue remain
 future work.
 
@@ -71,7 +71,7 @@ Checks:
 ```bash
 npm run check    # svelte-check, zero errors
 npm test         # Vitest unit + IndexedDB integration tests
-npm run test:e2e # Playwright: onboarding, planning, import/rollback, roster PDF
+npm run test:e2e # Playwright: onboarding, planner, import/rollback, roster PDF
 npm run build    # production build into dist/
 npm run preview  # serve the production build
 ```

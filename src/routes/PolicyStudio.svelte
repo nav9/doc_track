@@ -5,6 +5,7 @@
   import Card from '../lib/components/ui/Card.svelte';
   import Button from '../lib/components/ui/Button.svelte';
   import Field from '../lib/components/ui/Field.svelte';
+  import DateRangePicker from '../lib/components/ui/DateRangePicker.svelte';
   import Select from '../lib/components/ui/Select.svelte';
   import Toggle from '../lib/components/ui/Toggle.svelte';
   import Badge from '../lib/components/ui/Badge.svelte';
@@ -648,8 +649,7 @@
                   label: `${category.code} — ${category.fullForm}`
                 }))}
               />
-              <Field label="From" type="date" bind:value={testStart} />
-              <Field label="To" type="date" bind:value={testEnd} />
+              <DateRangePicker label="Test dates" bind:start={testStart} bind:end={testEnd} />
             </div>
             <div class="row">
               <Button size="sm" variant="secondary" onclick={runTest}>

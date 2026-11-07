@@ -55,6 +55,7 @@
   let autosavedAt = $state('');
   let lastAutosaveText = '';
   let pdfOpen = $state(false);
+  let doctorListOpen = $state(false);
   let pdfOptions = $state<RosterPdfOptions>({
     ...DEFAULT_ROSTER_PDF_OPTIONS,
     dateFormat: app.settings?.rosterDateFormat ?? DEFAULT_ROSTER_PDF_OPTIONS.dateFormat
@@ -95,6 +96,15 @@
   const ownDoctor = $derived(
     allDoctors.find((doctor) => doctor.profileId === profile?.id) ?? null
   );
+  const previousRoster = $derived.by(() => {
+    const previousMonth = month === 1 ? 12 : month - 1;
+    const previousYear = month === 1 ? year - 1 : year;
+    return (
+      app.snapshot.rosters.find(
+        (roster) => roster.year === previousYear && roster.month === previousMonth
+      ) ?? null
+    );
+  });
   const departmentDoctors = $derived(
     allDoctors
       .filter(
@@ -563,16 +573,11 @@
 
   async function copyPreviousMonth() {
     if (!draft) return;
-    const previousMonth = month === 1 ? 12 : month - 1;
-    const previousYear = month === 1 ? year - 1 : year;
-    const previous = app.snapshot.rosters.find(
-      (roster) => roster.year === previousYear && roster.month === previousMonth
-    );
-    if (!previous) {
+    if (!previousRoster) {
       app.notify('info', 'There is no saved roster for the previous month.');
       return;
     }
-    draft = shiftRosterMonth(previous, year, month);
+    draft = shiftRosterMonth(previousRoster, year, month);
     lastAutosaveText = JSON.stringify(draft);
     app.notify('info', 'Previous month loaded into this draft. Dates and units were shifted to this month.');
   }
@@ -652,7 +657,7 @@
         )
       : null
   );
-  const previewRows = $derived(pdfData ? rosterPreviewLines(pdfData).slice(0, 10) : []);
+  const previewRows = $derived(pdfData ? rosterPreviewLines(pdfData) : []);
 
   async function downloadPdf() {
     if (!pdfData || !draft) return;
@@ -712,10 +717,15 @@
         {#if autosavedAt}<span class="tiny muted">Autosave: {autosavedAt}</span>{/if}
       </div>
       <div class="row">
-        <Button size="sm" variant="secondary" onclick={copyPreviousMonth}>Use previous month</Button>
+        {#if previousRoster}
+          <Button size="sm" variant="secondary" onclick={copyPreviousMonth}>Use previous month</Button>
+        {/if}
         <Button size="sm" variant="secondary" onclick={fillMonth}>Fill all days</Button>
         <Button size="sm" variant="subtle" onclick={autoAssign} disabled={!draft || draft.entries.length === 0}>
           <Sparkles size={13} /> Auto assign doctors
+        </Button>
+        <Button size="sm" variant="subtle" onclick={() => (doctorListOpen = true)}>
+          Doctor names list
         </Button>
         <Button size="sm" variant="subtle" onclick={swapSelected} disabled={selectedIds.length !== 2}>
           Swap selected doctors
@@ -952,49 +962,49 @@
       {/if}
     </Card>
 
-    <Card>
-      <div class="section-card-head">
-        <div>
-          <h2>Central doctor list</h2>
-          <span class="tiny muted">{app.snapshot.doctors.length} saved doctors · used by every month</span>
-        </div>
-        <Button size="sm" variant="secondary" onclick={addDoctor}>New doctor</Button>
-      </div>
-      <div class="form-grid">
-        <Field label="Doctor's name" bind:value={doctorDraft.name} placeholder="Dr. Full name" />
-        <Field label="Employee ID" bind:value={doctorDraft.employeeId} placeholder="MC-..." />
-        <Field label="Department" bind:value={doctorDraft.department} placeholder={draft.department} />
-        <Field label="Designation" bind:value={doctorDraft.designation} placeholder="Senior Resident" />
-        <Field label="Unit" bind:value={doctorDraft.unit} placeholder="Unit II" />
-      </div>
-      <div class="row" style="margin-bottom:8px">
-        <Button size="sm" onclick={() => void saveDoctor()}>{doctorEditing ? 'Update doctor' : 'Add doctor'}</Button>
-        {#if doctorEditing}<Button size="sm" variant="ghost" onclick={addDoctor}>Cancel edit</Button>{/if}
-      </div>
-      <p class="tiny muted" style="margin:0 0 7px">
-        Names and employee IDs are checked before adding, so updating an existing doctor does not create a duplicate.
-      </p>
-      {#if app.snapshot.doctors.length === 0}
-        <p class="tiny muted">No doctors in the central list yet. Auto-assignment uses your own profile until you add more.</p>
-      {:else}
-        <div class="stack-sm">
-          {#each [...app.snapshot.doctors].sort((a, b) => a.name.localeCompare(b.name)) as doctor (doctor.id)}
-            <div class="list-row">
-              <div class="list-main">
-                <div class="list-title">{doctor.name}</div>
-                <div class="tiny muted">
-                  {doctor.employeeId || 'No employee ID'} · {doctor.department || 'No department'}{#if doctor.designation} · {doctor.designation}{/if}
-                </div>
-              </div>
-              <Button size="sm" variant="ghost" onclick={() => startEditDoctor(doctor)}>Edit</Button>
-              <Button size="sm" variant="danger" onclick={() => void removeDoctor(doctor)}>Remove</Button>
-            </div>
-          {/each}
-        </div>
-      {/if}
-    </Card>
   {/if}
 </div>
+
+<Dialog
+  open={doctorListOpen}
+  title="Doctor names list"
+  subtitle={`${app.snapshot.doctors.length} saved doctors · used by every month`}
+  onclose={() => (doctorListOpen = false)}
+>
+  <div class="between" style="margin-bottom:8px">
+    <span class="tiny muted">Names and employee IDs are checked before adding, so no duplicate is created.</span>
+    <Button size="sm" variant="secondary" onclick={addDoctor}>New doctor</Button>
+  </div>
+  <div class="form-grid">
+    <Field label="Doctor's name" bind:value={doctorDraft.name} placeholder="Dr. Full name" />
+    <Field label="Employee ID" bind:value={doctorDraft.employeeId} placeholder="MC-..." />
+    <Field label="Department" bind:value={doctorDraft.department} placeholder={draft?.department ?? ''} />
+    <Field label="Designation" bind:value={doctorDraft.designation} placeholder="Senior Resident" />
+    <Field label="Unit" bind:value={doctorDraft.unit} placeholder="Unit II" />
+  </div>
+  <div class="row" style="margin-bottom:8px">
+    <Button size="sm" onclick={() => void saveDoctor()}>{doctorEditing ? 'Update doctor' : 'Add doctor'}</Button>
+    {#if doctorEditing}<Button size="sm" variant="ghost" onclick={addDoctor}>Cancel edit</Button>{/if}
+  </div>
+  {#if app.snapshot.doctors.length === 0}
+    <p class="tiny muted">No doctors in the central list yet. Auto-assignment uses your own profile until you add more.</p>
+  {:else}
+    <div class="stack-sm">
+      {#each [...app.snapshot.doctors].sort((a, b) => a.name.localeCompare(b.name)) as doctor (doctor.id)}
+        <div class="list-row">
+          <div class="list-main">
+            <div class="list-title">{doctor.name}</div>
+            <div class="tiny muted">
+              {doctor.employeeId || 'No employee ID'} · {doctor.department || 'No department'}{#if doctor.designation} · {doctor.designation}{/if}
+            </div>
+          </div>
+          <Button size="sm" variant="ghost" onclick={() => startEditDoctor(doctor)}>Edit</Button>
+          <Button size="sm" variant="danger" onclick={() => void removeDoctor(doctor)}>Remove</Button>
+        </div>
+      {/each}
+    </div>
+  {/if}
+</Dialog>
 
 <Dialog
   open={pdfOpen}
@@ -1027,8 +1037,16 @@
     </div>
     <Toggle bind:checked={pdfOptions.showSignatureBlock} label="Leave signature and stamp space" />
 
+    {#if pdfData}
+      <div class="roster-document-head roster-preview-head">
+        <h2>{pdfData.departmentHeading}</h2>
+        <p>{pdfData.rosterHeading}</p>
+        {#if pdfData.hospital}<span>{pdfData.hospital}</span>{/if}
+      </div>
+    {/if}
+
     {#if previewRows.length > 0}
-      <div class="table-wrap">
+      <div class="table-wrap roster-preview-scroll">
         <table class="table-base">
           <thead><tr>{#each previewRows[0] as cell}<th>{cell}</th>{/each}</tr></thead>
           <tbody>
@@ -1038,7 +1056,8 @@
           </tbody>
         </table>
       </div>
-      <p class="tiny muted" style="margin:5px 0 0">Showing the first rows. The PDF contains every date.</p>
+      {#if pdfData}<p class="roster-note">{pdfData.footerNote}</p>{/if}
+      <p class="tiny muted" style="margin:5px 0 0">Scroll to inspect every row. The PDF contains every date.</p>
     {:else}
       <p class="tiny muted">Add roster entries to preview the printed table.</p>
     {/if}

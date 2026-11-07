@@ -10,6 +10,7 @@
   import EmptyState from '../lib/components/ui/EmptyState.svelte';
   import ProgressBar from '../lib/components/ui/ProgressBar.svelte';
   import Toggle from '../lib/components/ui/Toggle.svelte';
+  import DateRangePicker from '../lib/components/ui/DateRangePicker.svelte';
   import ProposalCalendar from '../lib/components/ProposalCalendar.svelte';
   import {
     evaluateLeaveRequest,
@@ -630,8 +631,13 @@
       </div>
       <div class="form-grid">
         <Select label="Leave category" bind:value={searchCategory} options={categoryOptions} />
-        <Field label="Window starts" type="date" bind:value={windowStart} />
-        <Field label="Window ends" type="date" bind:value={windowEnd} hint="Up to 92 days." />
+        <DateRangePicker
+          label="Search window"
+          bind:start={windowStart}
+          bind:end={windowEnd}
+          maxDays={92}
+          hint="Up to 92 days."
+        />
         <Field
           label="Minimum break"
           type="text"
@@ -709,8 +715,13 @@
 
       <div class="form-grid">
         <Select label="Leave category" bind:value={category} options={categoryOptions} required />
-        <Field label="From" type="date" bind:value={startDate} required />
-        <Field label="To" type="date" bind:value={endDate} required />
+        <DateRangePicker
+          label="Leave dates"
+          bind:start={startDate}
+          bind:end={endDate}
+          required
+          hint="Choose the first and last day; the same day twice records one day."
+        />
         {#if halfDayAvailable}
           <Select
             label="Half day"

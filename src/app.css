@@ -80,6 +80,8 @@
   --cat-proposed-fg: #996a11;
   --cat-nmc-bg: #e9f8f0;
   --cat-nmc-fg: #177047;
+  --cat-nmc-assumed-bg: #f4e6b4;
+  --cat-nmc-assumed-fg: #735600;
   --cat-event-bg: #f3eafe;
   --cat-event-fg: #6b34b8;
 
@@ -144,6 +146,8 @@
   --cat-proposed-fg: #f4cd7a;
   --cat-nmc-bg: #14301f;
   --cat-nmc-fg: #86e6b0;
+  --cat-nmc-assumed-bg: #3b3315;
+  --cat-nmc-assumed-fg: #e4c874;
   --cat-event-bg: #2a1f45;
   --cat-event-fg: #c9b2ff;
 
@@ -177,6 +181,8 @@
   --cat-proposed-fg: #6f5000;
   --cat-nmc-bg: #d3f5e2;
   --cat-nmc-fg: #0d5535;
+  --cat-nmc-assumed-bg: #f7e2a3;
+  --cat-nmc-assumed-fg: #664a00;
   --cat-event-bg: #e8d9ff;
   --cat-event-fg: #4b1e8c;
 }
@@ -206,6 +212,8 @@
   --cat-proposed-fg: #ffe08a;
   --cat-nmc-bg: #123a26;
   --cat-nmc-fg: #9ceec0;
+  --cat-nmc-assumed-bg: #3d3210;
+  --cat-nmc-assumed-fg: #f0ce7a;
   --cat-event-bg: #32215c;
   --cat-event-fg: #d9c4ff;
 }
@@ -394,6 +402,10 @@ h3 {
   background: var(--cat-nmc-bg);
   color: var(--cat-nmc-fg);
 }
+.cat-nmc-assumed {
+  background: var(--cat-nmc-assumed-bg);
+  color: var(--cat-nmc-assumed-fg);
+}
 .cat-event {
   background: var(--cat-event-bg);
   color: var(--cat-event-fg);
@@ -441,6 +453,194 @@ h3 {
 .input-base::placeholder {
   color: var(--muted);
   opacity: 0.75;
+}
+
+/* shadcn-style date range picker, composed from Bits UI Popover + RangeCalendar. */
+.date-range-field {
+  position: relative;
+}
+
+.date-range-trigger {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.date-range-trigger:hover {
+  border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+}
+
+.date-range-trigger:disabled {
+  background: var(--panel-2);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.date-range-trigger.has-error {
+  border-color: var(--danger);
+}
+
+.date-range-trigger > svg:first-child {
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.date-range-trigger > svg:last-child {
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.date-range-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.date-range-trigger.is-empty .date-range-value {
+  color: var(--muted);
+}
+
+.date-range-popover {
+  z-index: 95;
+  max-width: calc(100vw - 28px);
+  max-height: min(85vh, 640px);
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.date-range-calendar {
+  user-select: none;
+}
+
+.date-range-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 2px 8px;
+}
+
+.date-range-heading {
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 730;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.date-range-nav {
+  display: inline-grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.date-range-nav:hover {
+  background: var(--panel-2);
+}
+
+.date-range-nav:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.date-range-months {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.date-range-grid {
+  width: 224px;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.date-range-dow {
+  padding: 2px 0 5px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.date-range-cell {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: center;
+}
+
+.date-range-cell[data-range-middle] {
+  background: var(--primary-soft);
+}
+
+.date-range-day {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin: 1px;
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.date-range-day:hover {
+  background: var(--panel-2);
+}
+
+.date-range-day[data-selected] {
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.date-range-day[data-selection-start],
+.date-range-day[data-selection-end] {
+  background: var(--primary);
+  color: var(--primary-fg);
+}
+
+.date-range-day[data-today] {
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.date-range-day[data-outside-month] {
+  opacity: 0.42;
+}
+
+.date-range-day[data-unavailable] {
+  opacity: 0.32;
+  text-decoration: line-through;
 }
 
 .table-base {
@@ -1567,6 +1767,14 @@ h3 {
   text-overflow: ellipsis;
 }
 
+.cal-mark.cat-nmc-assumed {
+  height: auto;
+  padding-inline: 2px;
+  font-size: 7.5px;
+  letter-spacing: -0.01em;
+  line-height: 1.45;
+}
+
 .cal-more {
   font-size: 8px;
   color: var(--muted);
@@ -1844,6 +2052,21 @@ h3 {
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.roster-preview-scroll {
+  max-height: min(52vh, 420px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.roster-preview-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--panel-2);
 }
 
 .modal-backdrop {
@@ -2218,15 +2441,9 @@ h3 {
 }
 
 .own-doctor .duty-row:not(.row-error):not(.row-warning) {
-  background: var(--danger-soft);
-  box-shadow: inset 3px 0 0 var(--danger);
-  color: var(--danger);
-}
-
-[data-colorblind='true'] .own-doctor .duty-row:not(.row-error):not(.row-warning) {
-  background: var(--purple-soft);
-  box-shadow: inset 3px 0 0 var(--purple);
-  color: var(--purple);
+  background: var(--success-soft);
+  box-shadow: inset 3px 0 0 var(--success);
+  color: var(--success);
 }
 
 .roster-note {
@@ -2406,6 +2623,14 @@ h3 {
   .quick-toggle-row .toggle-row {
     gap: 4px;
     padding: 5px 5px;
+  }
+
+  .date-range-grid {
+    width: 100%;
+  }
+
+  .date-range-months {
+    flex-direction: column;
   }
 
   .leave-usage-head {

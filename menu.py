@@ -6,8 +6,11 @@ from __future__ import annotations
 import os
 import shutil
 import signal
+import socket
 import subprocess
 import sys
+import time
+import webbrowser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -53,6 +56,32 @@ def build_project(clean: bool = False) -> None:
         print(f"\nBuild failed with exit code {result.returncode}.")
 
 
+def open_browser_when_ready(port: int, process: subprocess.Popen[bytes]) -> None:
+    """Open the app once Vite is accepting connections, or report the URL."""
+    url = f"http://127.0.0.1:{port}/"
+    deadline = time.monotonic() + 20
+
+    while process.poll() is None and time.monotonic() < deadline:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.settimeout(0.25)
+            if probe.connect_ex(("127.0.0.1", port)) == 0:
+                break
+        time.sleep(0.1)
+
+    if process.poll() is not None:
+        return
+
+    try:
+        opened = webbrowser.open(url)
+    except webbrowser.Error:
+        opened = False
+
+    if opened:
+        print(f"Opened {url} in your default browser.")
+    else:
+        print(f"Could not launch a browser automatically. Open {url} in your browser.")
+
+
 def stop_server(process: subprocess.Popen[bytes]) -> None:
     if process.poll() is not None:
         return
@@ -86,6 +115,7 @@ def run_project(with_test_data: bool = False) -> None:
     command = [NPM, "run", "dev", "--", "--port", str(port), "--strictPort"]
     process = subprocess.Popen(command, cwd=ROOT, env=env, start_new_session=True)
     try:
+        open_browser_when_ready(port, process)
         process.wait()
     except KeyboardInterrupt:
         stop_server(process)

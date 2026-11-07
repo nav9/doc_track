@@ -15,6 +15,7 @@
   import Field from '../lib/components/ui/Field.svelte';
   import Badge from '../lib/components/ui/Badge.svelte';
   import Dialog from '../lib/components/ui/Dialog.svelte';
+  import DateRangePicker from '../lib/components/ui/DateRangePicker.svelte';
   import { formatDate, endOfMonth, startOfMonth } from '../lib/domain/common/dates';
   import { rangeText, statusTone } from '../lib/app/ui';
   import { downloadText, pickTextFile, writeClipboard } from '../lib/infrastructure/files/files';
@@ -554,8 +555,7 @@ Reason: Family function`;
         </Badge>
       </div>
       <div class="form-grid">
-        <Field label="Period from" type="date" bind:value={rangeStart} />
-        <Field label="Period to" type="date" bind:value={rangeEnd} />
+        <DateRangePicker label="Leave period" bind:start={rangeStart} bind:end={rangeEnd} />
       </div>
       {#if rangeLeaves.length === 0}
         <p class="tiny muted">No shared leave overlaps this period.</p>
@@ -674,8 +674,12 @@ Reason: Family function`;
             {/each}
           </select>
         </label>
-        <Field label="From" type="date" bind:value={leaveDraft.startDate} />
-        <Field label="To" type="date" bind:value={leaveDraft.endDate} />
+        <DateRangePicker
+          label="Leave dates"
+          bind:start={leaveDraft.startDate}
+          bind:end={leaveDraft.endDate}
+          hint="The same day twice records a one-day leave."
+        />
         <Field label="Leave type" bind:value={leaveDraft.category} placeholder="CL" />
         <label class="field">
           <span class="field-label">Status</span>

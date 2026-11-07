@@ -6,7 +6,8 @@
  * clipped on A4.
  */
 import type { DutyRoster, RosterPdfOptions } from '../../domain/roster/types';
-import { formatDate, daysInMonth, SHORT_DAY_NAMES, dayOfWeek, toTimeLabel } from '../../domain/common/dates';
+import { formatDate, DAY_NAMES, dayOfWeek } from '../../domain/common/dates';
+import { unitLabel } from '../../domain/roster/schedule';
 
 export interface PdfColumn {
   key: string;
@@ -26,6 +27,8 @@ export interface RosterPdfData {
   hospital: string;
   department: string;
   unit: string;
+  departmentHeading: string;
+  rosterHeading: string;
   periodLabel: string;
   generatedOn: string;
   columns: PdfColumn[];
@@ -50,66 +53,43 @@ const MONTH_NAMES = [
   'December'
 ];
 
-function timeRange(start: string, end: string, crossesMidnight: boolean): string {
-  return `${toTimeLabel(start, '24h')} – ${toTimeLabel(end, '24h')}${crossesMidnight ? ' (+1 day)' : ''}`;
-}
-
 export function prepareRosterPdfData(
   roster: DutyRoster,
   options: RosterPdfOptions,
   generatedOn: string
 ): RosterPdfData {
   const columns: PdfColumn[] = [
-    { key: 'sl', label: 'Sl.', width: 8, align: 'center' },
-    { key: 'date', label: 'Date', width: 18 }
+    { key: 'date', label: 'DATE', width: 28 },
+    { key: 'days', label: 'DAYS', width: 25 },
+    { key: 'unit', label: 'UNIT', width: 16, align: 'center' },
+    { key: 'doctor', label: "DOCTOR'S NAME", width: 45 }
   ];
-  if (options.showDutyType) columns.push({ key: 'type', label: 'Duty', width: 14 });
-  columns.push({ key: 'doctor', label: 'Doctor', width: 30 });
-  if (options.showEmployeeId) columns.push({ key: 'employeeId', label: 'Employee ID', width: 16 });
-  if (options.showDepartment) columns.push({ key: 'department', label: 'Department', width: 18 });
-  if (options.showUnit) columns.push({ key: 'unit', label: 'Unit', width: 12 });
-  columns.push({ key: 'time', label: 'Time', width: 20 });
-  if (options.showRemarks) columns.push({ key: 'remarks', label: 'Remarks', width: 26 });
 
   const sorted = [...roster.entries].sort((a, b) => a.date.localeCompare(b.date));
-  const rows: PdfRow[] = sorted.map((entry, index) => ({
+  const rows: PdfRow[] = sorted.map((entry) => ({
     isWeekend: [0, 6].includes(dayOfWeek(entry.date)),
     cells: {
-      sl: String(index + 1),
-      date: `${formatDate(entry.date, options.dateFormat)} (${SHORT_DAY_NAMES[dayOfWeek(entry.date)]})`,
-      type: entry.dutyType.charAt(0).toUpperCase() + entry.dutyType.slice(1),
-      doctor: entry.doctorName,
-      employeeId: entry.employeeId,
-      department: entry.department,
-      unit: entry.unit,
-      time: timeRange(entry.startTime, entry.endTime, entry.startTime >= entry.endTime),
-      remarks:
-        [entry.remarks, entry.swapNote ? `Swap: ${entry.swapNote}` : ''].filter(Boolean).join('; ') ||
-        '—'
+      date: formatDate(entry.date, options.dateFormat),
+      days: DAY_NAMES[dayOfWeek(entry.date)],
+      unit: entry.unit || unitLabel(entry.unitNumber ?? 0, roster.unitStyle ?? 'roman'),
+      doctor: entry.doctorName
     }
   }));
 
-  const monthDays = daysInMonth(roster.year, roster.month);
-  const uncovered = Array.from({ length: monthDays }, (_, index) => index + 1)
-    .filter((day) => {
-      const date = `${roster.year}-${String(roster.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      return !sorted.some((entry) => entry.date === date);
-    });
-
+  const periodLabel = `${MONTH_NAMES[roster.month - 1]} ${roster.year}`;
   return {
     title: options.title || roster.title,
-    subtitle: roster.title && roster.title !== options.title ? roster.title : '',
+    subtitle: '',
     hospital: roster.hospitalName,
     department: roster.department,
     unit: roster.unit,
-    periodLabel: `${MONTH_NAMES[roster.month - 1]} ${roster.year}`,
+    departmentHeading: `DEPARTMENT OF ${(roster.department || '').toUpperCase()}`.trim(),
+    rosterHeading: `DOCTOR'S DUTY ROSTER FOR THE MONTH OF ${periodLabel.toUpperCase()}`,
+    periodLabel,
     generatedOn,
     columns,
     rows,
-    footerNote:
-      uncovered.length > 0
-        ? `${uncovered.length} day(s) in this month have no roster entry.`
-        : 'Every day in this month has a roster entry.',
+    footerNote: 'Note: No alteration to be made without the permission of the undersigned',
     showSignatureBlock: options.showSignatureBlock,
     orientation: options.orientation
   };

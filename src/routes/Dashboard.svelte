@@ -20,6 +20,7 @@
     addMark,
     categoryChipClass,
     daysText,
+    percent,
     rangeText,
     toneForCategory,
     type DayMark
@@ -89,13 +90,49 @@
     return map;
   });
 
-  const balanceCodes = ['CL', 'EL', 'CCL', 'SPCL'];
-  const shownBalances = $derived(
-    balanceCodes.flatMap((code) => {
+  const leaveTypes = [
+    { code: 'CL', label: 'CL' },
+    { code: 'CCL', label: 'CCL' },
+    { code: 'EL', label: 'EL' },
+    { code: 'SPCL', label: 'SpCL' }
+  ] as const;
+
+  type LeaveMetricKey = 'available' | 'used' | 'pending';
+
+  const leaveMetricRows: { key: LeaveMetricKey; label: string; hint: string }[] = [
+    { key: 'available', label: 'Available', hint: 'remaining' },
+    { key: 'used', label: 'Used', hint: 'approved' },
+    { key: 'pending', label: 'Awaiting approval', hint: 'pending' }
+  ];
+
+  const leaveSummaries = $derived.by(() =>
+    leaveTypes.map(({ code, label }) => {
       const balance = app.balances[code];
+      const pending = Math.max(0, balance?.pending ?? 0);
+      return {
+        code,
+        label,
+        available: balance?.available ?? 0,
+        // The ledger's used figure includes pending debits; split them so the
+        // dashboard can show approved usage and approvals waiting separately.
+        used: Math.max(0, (balance?.used ?? 0) - pending),
+        pending,
+        periodLabel: balance?.periodLabel ?? 'Current period',
+        fullForm: app.categories.find((category) => category.code === code)?.fullForm ?? label
+      };
+    })
+  );
+
+  const shownBalances = $derived(
+    leaveSummaries.flatMap((leave) => {
+      const balance = app.balances[leave.code];
       return balance ? [balance] : [];
     })
   );
+
+  function leaveNumber(value: number): string {
+    return String(Math.round(value * 100) / 100);
+  }
 
   const recommendations = $derived.by<Recommendation[]>(() => {
     if (!app.settings) return [];
@@ -239,6 +276,7 @@
     <CalendarPlus size={14} /> Plan leave
   </Button>
   <Button onclick={() => navigate('/roster')}>Open duty roster</Button>
+  <Button variant="secondary" onclick={() => navigate('/multi-user')}>Multi User</Button>
 </PageHeader>
 
 {#if backupNeeded || (app.settings && !app.settings.storageWarningDismissed)}
@@ -282,30 +320,102 @@
   </div>
 {/if}
 
-<section class="grid-4" style="margin-bottom:12px" aria-label="Leave balances">
-  {#each shownBalances as balance (balance.category)}
-    <button type="button" class="stat-card" onclick={() => navigate('/planner')}>
-      <div class="stat-top">
-        <span class={categoryChipClass(balance.category)}>{balance.category}</span>
-        <span class="tiny muted">{balance.periodLabel}</span>
+<section class="leave-metrics" aria-labelledby="leave-balance-title">
+  <div class="leave-metrics-head">
+    <div>
+      <h2 id="leave-balance-title">Leave balance</h2>
+      <span class="tiny muted">Current entitlement period</span>
+    </div>
+    <button type="button" class="link-button tiny" onclick={() => navigate('/planner')}>Plan leave</button>
+  </div>
+
+  {#each leaveMetricRows as row (row.key)}
+    <div class="leave-metric-row">
+      <div class="leave-metric-row-label">
+        <strong>{row.label}</strong>
+        <span class="tiny muted">{row.hint}</span>
       </div>
-      <div class="stat-value">{balance.available}</div>
-      <div class="stat-meta">
-        available · {balance.used} used{#if balance.category === 'EL'} of {balance.credited} allowed{/if}
+      <div class="leave-metric-cards">
+        {#each leaveSummaries as leave (leave.code)}
+          <button
+            type="button"
+            class="leave-metric-card"
+            class:is-empty={row.key !== 'available' && leave[row.key] === 0}
+            aria-label={`${leave.label} ${row.label.toLowerCase()}: ${daysText(leave[row.key])}`}
+            title={`${leave.periodLabel} · ${row.label.toLowerCase()}: ${daysText(leave[row.key])}`}
+            onclick={() => navigate('/planner')}
+          >
+            <span class={categoryChipClass(leave.code)}>{leave.label}</span>
+            <span class="leave-metric-reading">
+              <strong>{leaveNumber(leave[row.key])}</strong>
+              <span>days</span>
+            </span>
+          </button>
+        {/each}
       </div>
-      {#if balance.expiringSoon.length > 0}
-        <div class="tiny" style="color:var(--warning);font-weight:650">
-          {balance.expiringSoon.length} credit{balance.expiringSoon.length === 1 ? '' : 's'} expiring
-        </div>
-      {:else if balance.pending > 0}
-        <div class="tiny muted">{balance.pending} awaiting approval</div>
-      {/if}
-    </button>
+    </div>
   {/each}
-  {#if shownBalances.length === 0}
-    <Card pad={false}><div class="empty"><strong>No balances yet</strong><span class="tiny muted">Record leave or a duty to start the ledger.</span></div></Card>
-  {/if}
 </section>
+
+<Card className="leave-usage-card">
+  <div class="section-card-head">
+    <div>
+      <h2>Leave used and remaining</h2>
+      <span class="tiny muted">Approved usage and approvals still waiting</span>
+    </div>
+    <button type="button" class="link-button tiny" onclick={() => navigate('/leave-rules')}>View rules</button>
+  </div>
+
+  <div class="leave-usage-table" role="table" aria-label="Leave usage, remaining balance and pending approvals">
+    <div class="leave-usage-row leave-usage-head" role="row">
+      <span role="columnheader">Leave</span>
+      <span role="columnheader">Available</span>
+      <span role="columnheader">Used</span>
+      <span role="columnheader">Pending</span>
+      <span role="columnheader">Used / remaining</span>
+    </div>
+    {#each leaveSummaries as leave (leave.code)}
+      {@const total = Math.max(0, leave.available) + leave.used + leave.pending}
+      <div class="leave-usage-row" role="row">
+        <div class="leave-usage-name" role="cell">
+          <span class={categoryChipClass(leave.code)}>{leave.label}</span>
+          <span class="small muted">{leave.fullForm}</span>
+        </div>
+        <div class="leave-usage-value" role="cell">
+          <span class="leave-usage-mobile-label">Available</span>
+          <strong>{leaveNumber(leave.available)}</strong>
+        </div>
+        <div class="leave-usage-value" role="cell">
+          <span class="leave-usage-mobile-label">Used</span>
+          <strong>{leaveNumber(leave.used)}</strong>
+        </div>
+        <div class="leave-usage-value" role="cell">
+          <span class="leave-usage-mobile-label">Pending</span>
+          <strong>{leaveNumber(leave.pending)}</strong>
+        </div>
+        <div class="leave-usage-meter-cell" role="cell">
+          <div
+            class="leave-usage-meter"
+            role="progressbar"
+            aria-label={`${leave.code} leave usage`}
+            aria-valuenow={leave.used}
+            aria-valuemin={0}
+            aria-valuemax={total}
+            aria-valuetext={`${daysText(leave.used)} used, ${daysText(leave.pending)} pending, ${daysText(leave.available)} remaining`}
+          >
+            <span class="leave-usage-used" style={`width:${percent(leave.used, total)}%`}></span>
+            <span class="leave-usage-pending" style={`width:${percent(leave.pending, total)}%`}></span>
+          </div>
+        </div>
+      </div>
+    {/each}
+  </div>
+  <div class="leave-usage-key">
+    <span><i class="leave-key-used"></i>Used</span>
+    <span><i class="leave-key-pending"></i>Awaiting approval</span>
+    <span><i class="leave-key-available"></i>Remaining</span>
+  </div>
+</Card>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-bottom:12px">
   <Card>

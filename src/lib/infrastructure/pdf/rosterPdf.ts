@@ -65,26 +65,21 @@ export function generateRosterPdf(data: RosterPdfData, monthName: string): Blob 
   };
 
   const drawHeader = () => {
+    doc.setTextColor(23, 32, 51);
     doc.setFont(FONT, 'bold');
-    doc.setFontSize(15);
-    doc.text(data.hospital || 'Doctor Duty Roster', MARGIN, MARGIN + 2);
-    doc.setFont(FONT, 'normal');
-    doc.setFontSize(9);
-    const details = [data.department, data.unit].filter(Boolean).join(' · ');
-    if (details) doc.text(details, MARGIN, MARGIN + 8);
-    doc.setFont(FONT, 'bold');
-    doc.setFontSize(12);
-    doc.text(data.title, pageWidth / 2, MARGIN + 17, { align: 'center' });
-    doc.setFont(FONT, 'normal');
-    doc.setFontSize(10);
-    doc.text(data.periodLabel, pageWidth / 2, MARGIN + 23, { align: 'center' });
-    if (data.subtitle) {
-      doc.setFontSize(8);
-      doc.text(data.subtitle, pageWidth / 2, MARGIN + 28, { align: 'center' });
-    }
+    doc.setFontSize(14);
+    doc.text(data.departmentHeading, pageWidth / 2, MARGIN + 1, {
+      align: 'center',
+      maxWidth: usableWidth
+    });
+    doc.setFontSize(11);
+    doc.text(data.rosterHeading, pageWidth / 2, MARGIN + 10, {
+      align: 'center',
+      maxWidth: usableWidth
+    });
   };
 
-  let y = MARGIN + 34;
+  let y = MARGIN + 22;
   drawHeader();
 
   const drawTableHeader = () => {
@@ -95,7 +90,7 @@ export function generateRosterPdf(data: RosterPdfData, monthName: string): Blob 
     doc.setFontSize(8);
     let x = MARGIN;
     data.columns.forEach((column, index) => {
-      doc.text(column.label, x + 1.5, y + 4.6);
+      doc.text(column.label, x + columnWidths[index] / 2, y + 4.6, { align: 'center' });
       x += columnWidths[index];
     });
     y += height;
@@ -118,7 +113,7 @@ export function generateRosterPdf(data: RosterPdfData, monthName: string): Blob 
       pageNumber += 1;
       y = MARGIN;
       drawHeader();
-      y = MARGIN + 34;
+      y = MARGIN + 22;
       drawTableHeader();
     }
 
@@ -140,30 +135,32 @@ export function generateRosterPdf(data: RosterPdfData, monthName: string): Blob 
     y += rowHeight;
   }
 
-  // Footer note and signature block on the final page.
-  doc.setFont(FONT, 'italic');
-  doc.setFontSize(8);
-  doc.setTextColor(104, 117, 138);
-  y += 4;
-  doc.text(data.footerNote, MARGIN, y, { maxWidth: usableWidth });
+  // The prescribed note sits below the table, centred in the normal font.
+  if (y > pageHeight - 92) {
+    addPageFooter();
+    doc.addPage();
+    pageNumber += 1;
+    y = MARGIN;
+  }
+  doc.setFont(FONT, 'normal');
+  doc.setFontSize(9);
   doc.setTextColor(23, 32, 51);
+  const noteY = Math.min(Math.max(y + 9, pageHeight - 84), pageHeight - 76);
+  doc.text(data.footerNote, pageWidth / 2, noteY, {
+    align: 'center',
+    maxWidth: usableWidth
+  });
 
   if (data.showSignatureBlock) {
-    const blockHeight = 34;
-    if (y + blockHeight > pageHeight - 18) {
-      addPageFooter();
-      doc.addPage();
-      pageNumber += 1;
-      y = MARGIN;
-    }
-    y = Math.min(Math.max(y + 12, pageHeight - 60), pageHeight - blockHeight - 12);
+    const signatureY = pageHeight - 62;
     doc.setDrawColor(203, 213, 225);
-    doc.line(MARGIN, y, MARGIN + 55, y);
-    doc.line(pageWidth - MARGIN - 55, y, pageWidth - MARGIN, y);
+    doc.setLineWidth(0.3);
+    doc.line(MARGIN, signatureY + 18, MARGIN + 55, signatureY + 18);
+    doc.line(pageWidth - MARGIN - 60, signatureY + 18, pageWidth - MARGIN, signatureY + 18);
     doc.setFont(FONT, 'normal');
     doc.setFontSize(8);
-    doc.text('Prepared by (Signature / Date)', MARGIN, y + 4);
-    doc.text('Approved by HOD / HR (Signature / Stamp)', pageWidth - MARGIN - 55, y + 4);
+    doc.text('Signature of the undersigned', MARGIN, signatureY + 23);
+    doc.text('Signature / Stamp of HOD', pageWidth - MARGIN - 60, signatureY + 23);
   }
 
   addPageFooter();

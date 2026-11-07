@@ -59,11 +59,23 @@ describe('roster PDF', () => {
     );
 
     expect(data.periodLabel).toBe('November 2026');
+    expect(data.departmentHeading).toBe('DEPARTMENT OF GENERAL MEDICINE');
+    expect(data.rosterHeading).toBe(
+      "DOCTOR'S DUTY ROSTER FOR THE MONTH OF NOVEMBER 2026"
+    );
     expect(data.rows).toHaveLength(2);
     expect(data.rows[0].cells.doctor).toBe('Dr. Asha Rao');
-    expect(data.rows[0].cells.time).toContain('(+1 day)');
-    expect(data.columns.map((column) => column.key)).toContain('employeeId');
-    expect(data.footerNote).toContain('no roster entry');
+    expect(data.rows[0].cells.days).toBe('Wednesday');
+    expect(data.rows[0].cells.unit).toBe('Unit II');
+    expect(data.columns.map((column) => column.key)).toEqual([
+      'date',
+      'days',
+      'unit',
+      'doctor'
+    ]);
+    expect(data.footerNote).toBe(
+      'Note: No alteration to be made without the permission of the undersigned'
+    );
 
     const blob = generateRosterPdf(data, '11/2026');
     expect(blob.type).toBe('application/pdf');

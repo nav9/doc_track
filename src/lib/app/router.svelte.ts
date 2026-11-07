@@ -50,6 +50,7 @@ export const ROUTE_TITLES: Record<string, string> = {
   '/': 'Dashboard',
   '/planner': 'Leave planner',
   '/roster': 'Duty roster',
+  '/multi-user': 'Multi User',
   '/leave-rules': 'Leave rules',
   '/attendance': 'NMC attendance',
   '/account': 'Account',

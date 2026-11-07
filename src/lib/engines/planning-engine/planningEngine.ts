@@ -22,6 +22,7 @@ import {
 } from '../../domain/common/dates';
 import type { Holiday } from '../../domain/calendar/holidays';
 import { buildHolidayLookup, isNonWorkingDay } from '../../domain/calendar/holidays';
+import { isActiveLeave, type LeaveRequest } from '../../domain/leave/types';
 import type { CategoryBalance } from '../../domain/ledger/types';
 import { getCategoryRule, resolvePolicySegments } from '../policy-engine/policyEngine';
 import { computeBalances } from '../leave-accounting/ledgerEngine';
@@ -110,26 +111,29 @@ function balancesFor(context: LeaveValidationContext): Record<string, CategoryBa
   });
 }
 
-/** Extends a leave range across adjacent weekends and holidays. */
+/**
+ * Extends a leave range across adjacent weekends, holidays and recorded leave.
+ * Recorded leave is already time away from work, so a new proposal that touches
+ * it can turn two shorter breaks into one longer one.
+ */
 export function continuousBreak(
   start: ISODate,
   end: ISODate,
   holidays: Holiday[],
-  weekendDays: number[]
+  weekendDays: number[],
+  fixedLeaves: Pick<LeaveRequest, 'startDate' | 'endDate' | 'status'>[] = []
 ): { breakStart: ISODate; breakEnd: ISODate; breakDays: number } {
   const lookup = buildHolidayLookup(holidays, weekendDays);
+  const activeFixedLeaves = fixedLeaves.filter(isActiveLeave);
+  const isBreakDay = (date: ISODate): boolean =>
+    isNonWorkingDay(date, lookup) ||
+    activeFixedLeaves.some((leave) => date >= leave.startDate && date <= leave.endDate);
   let breakStart = start;
   let breakEnd = end;
-  while (
-    isNonWorkingDay(addDays(breakStart, -1), lookup) &&
-    rangeLength(addDays(breakStart, -1), breakEnd) < 60
-  ) {
+  while (isBreakDay(addDays(breakStart, -1)) && rangeLength(addDays(breakStart, -1), breakEnd) < 60) {
     breakStart = addDays(breakStart, -1);
   }
-  while (
-    isNonWorkingDay(addDays(breakEnd, 1), lookup) &&
-    rangeLength(breakStart, addDays(breakEnd, 1)) < 60
-  ) {
+  while (isBreakDay(addDays(breakEnd, 1)) && rangeLength(breakStart, addDays(breakEnd, 1)) < 60) {
     breakEnd = addDays(breakEnd, 1);
   }
   return { breakStart, breakEnd, breakDays: rangeLength(breakStart, breakEnd) };
@@ -222,6 +226,7 @@ export function searchCandidates(
 
   const results: PlanCandidate[] = [];
   const seen = new Set<string>();
+  const fixedLeaves = context.leaves.filter(isActiveLeave);
   const maxCandidates = query.maxCandidates ?? 250;
 
   for (const category of query.categories) {
@@ -253,7 +258,13 @@ export function searchCandidates(
           continue;
         }
 
-        const brk = continuousBreak(startCursor, endCursor, context.holidays, weekendDays);
+        const brk = continuousBreak(
+          startCursor,
+          endCursor,
+          context.holidays,
+          weekendDays,
+          fixedLeaves
+        );
         if (query.minBreakDays && brk.breakDays < query.minBreakDays) continue;
 
         const candidate: PlanCandidate = {

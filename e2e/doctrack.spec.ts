@@ -75,6 +75,32 @@ test('leave planning records a validated leave in the ledger', async ({ page }) 
   await expect(page.getByRole('heading', { name: 'Recent leave records' })).toBeVisible();
 });
 
+test('quick planner proposes options and clears them', async ({ page }) => {
+  await onboard(page);
+  await page.goto('./#/planner');
+  await expect(page.getByRole('heading', { name: 'Quick planner' })).toBeVisible();
+
+  const planNow = page.getByRole('button', { name: 'Plan now' });
+  await expect(planNow).toBeEnabled();
+  for (const category of ['CL', 'EL', 'CCL', 'SpCL']) {
+    await expect(page.getByRole('checkbox', { name: category })).toBeChecked();
+  }
+
+  await planNow.click();
+  await expect(page.getByText('Option 1', { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText('Leave', { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Clear' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Clear' }).click();
+  await expect(page.getByText('Option 1', { exact: true })).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Clear' })).toBeHidden();
+
+  for (const category of ['CL', 'EL', 'CCL', 'SpCL']) {
+    await page.getByRole('checkbox', { name: category }).uncheck();
+  }
+  await expect(planNow).toBeDisabled();
+});
+
 test('a downloaded backup imports and restores through version history', async ({ page }) => {
   await onboard(page);
   await addLeave(page, 10, 10);
@@ -109,6 +135,7 @@ test('roster PDF downloads as a real PDF', async ({ page }) => {
   await onboard(page);
   await page.goto('./#/roster');
   await page.getByRole('button', { name: 'Fill all days' }).first().click();
+  await page.getByRole('button', { name: 'Auto assign doctors' }).click();
   await page.getByRole('button', { name: 'Save roster' }).click();
   await expect(page.getByRole('button', { name: 'PDF preview' })).toBeEnabled();
 
@@ -126,4 +153,30 @@ test('roster PDF downloads as a real PDF', async ({ page }) => {
   expect(download.suggestedFilename()).toMatch(/\.pdf$/i);
   expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
   expect(pdf.byteLength).toBeGreaterThan(1_000);
+});
+
+test('multi user saves a known doctor and shared leave', async ({ page }) => {
+  await onboard(page);
+  await page.goto('./#/multi-user');
+  await expect(page.getByRole('heading', { name: 'Multi User', exact: true }).first()).toBeVisible();
+
+  await page.getByRole('button', { name: 'Add doctor', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Add a known doctor' });
+  await dialog.getByLabel("Doctor's name").fill('Dr. Meera Nair');
+  await dialog.getByLabel('Employee ID').fill('MC-900');
+  await dialog.getByLabel('Department').fill('Orthopaedics');
+  await dialog.getByLabel('Designation').fill('Senior Resident');
+  await dialog.getByLabel('Speciality').fill('Joint Replacement');
+  await dialog.getByRole('button', { name: 'Save doctor' }).click();
+
+  await expect(page.getByText('Dr. Meera Nair').first()).toBeVisible();
+  const dutyDate = await page.getByLabel('Duty date').inputValue();
+  await page.getByRole('combobox', { name: 'Doctor', exact: true }).selectOption({
+    label: 'Dr. Meera Nair · MC-900'
+  });
+  await page.getByLabel('From', { exact: true }).fill(dutyDate);
+  await page.getByLabel('To', { exact: true }).fill(dutyDate);
+  await page.getByRole('button', { name: 'Add temporary leave' }).click();
+  await expect.poll(() => countStore(page, 'sharedLeaves')).toBe(1);
+  await expect(page.getByText('On leave').first()).toBeVisible();
 });

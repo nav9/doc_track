@@ -15,6 +15,7 @@ import type { Duty, PdoRecord } from '../../domain/duty/types';
 import type { AttendanceRecord } from '../../domain/attendance/types';
 import type { CalendarEvent, EventName, Holiday } from '../../domain/calendar/holidays';
 import type { DutyRoster, RosterDoctor } from '../../domain/roster/types';
+import type { SharedLeave } from '../../domain/multiuser/types';
 import type { LogEntry } from '../../domain/settings/types';
 import type { DataSnapshot } from '../dto/snapshot';
 import type { DataVersion } from '../dto/version';
@@ -64,6 +65,7 @@ export interface Repositories {
   eventNames: CollectionRepository<EventName>;
   doctors: CollectionRepository<RosterDoctor>;
   rosters: CollectionRepository<DutyRoster>;
+  sharedLeaves: CollectionRepository<SharedLeave>;
   versions: CollectionRepository<DataVersion>;
   logs: CollectionRepository<LogEntry>;
   /** Closes the underlying connection (used by tests). */

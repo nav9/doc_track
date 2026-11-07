@@ -1,5 +1,8 @@
 import type { AuditFields, ISODate } from '../common/types';
 import type { DateFormat } from '../common/dates';
+import type { LeaveStatus } from '../leave/types';
+
+export type UnitNumberStyle = 'roman' | 'number' | 'word';
 
 export interface RosterDoctor extends AuditFields {
   id: string;
@@ -8,6 +11,8 @@ export interface RosterDoctor extends AuditFields {
   department: string;
   unit: string;
   designation: string;
+  speciality?: string;
+  contactPhone?: string;
   profileId: string | null;
   notes: string;
 }
@@ -27,6 +32,8 @@ export interface RosterEntry {
   dutyType: RosterDutyType;
   remarks: string;
   swapNote: string;
+  /** Stable unit index used when the display style changes. */
+  unitNumber?: number | null;
   /** Linked Duty record so the roster and duty calendar never diverge. */
   dutyId: string | null;
 }
@@ -46,6 +53,11 @@ export interface DutyRoster extends AuditFields {
   hospitalName: string;
   entries: RosterEntry[];
   notes: string;
+  unitCount?: number;
+  unitStyle?: UnitNumberStyle;
+  dateFormat?: DateFormat;
+  showLeaveWarnings?: boolean;
+  leaveWarningStatuses?: LeaveStatus[];
 }
 
 export interface RosterPdfOptions {

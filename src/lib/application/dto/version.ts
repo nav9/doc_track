@@ -12,7 +12,7 @@ export interface DataVersion {
   snapshot: DataSnapshot;
 }
 
-export type ExportKind = 'full' | 'leave' | 'policy' | 'roster' | 'holidays';
+export type ExportKind = 'full' | 'leave' | 'policy' | 'roster' | 'holidays' | 'multiuser';
 
 export interface ExportOptions {
   kind: ExportKind;

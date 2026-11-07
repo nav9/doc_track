@@ -165,6 +165,19 @@ describe('continuous break calculation', () => {
     expect(result.breakEnd).toBe('2026-11-10');
     expect(result.breakDays).toBe(4);
   });
+
+  it('combines with adjacent recorded leave', () => {
+    const recorded = makeLeave({
+      category: 'CL',
+      startDate: '2026-11-13',
+      endDate: '2026-11-16',
+      leaveDays: 4
+    });
+    const result = continuousBreak('2026-11-12', '2026-11-12', [], [0, 6], [recorded]);
+    expect(result.breakStart).toBe('2026-11-12');
+    expect(result.breakEnd).toBe('2026-11-16');
+    expect(result.breakDays).toBe(5);
+  });
 });
 
 describe('long break suggestions', () => {

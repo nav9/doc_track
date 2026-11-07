@@ -8,6 +8,8 @@
   import Select from '../lib/components/ui/Select.svelte';
   import Badge from '../lib/components/ui/Badge.svelte';
   import EmptyState from '../lib/components/ui/EmptyState.svelte';
+  import ProgressBar from '../lib/components/ui/ProgressBar.svelte';
+  import Toggle from '../lib/components/ui/Toggle.svelte';
   import ProposalCalendar from '../lib/components/ProposalCalendar.svelte';
   import {
     evaluateLeaveRequest,
@@ -20,13 +22,20 @@
   } from '../lib/engines/planning-engine/planningEngine';
   import { planDuty } from '../lib/engines/duty-engine/dutyEngine';
   import { messageOf } from '../lib/application/services/errors';
-  import { addDays, formatDate } from '../lib/domain/common/dates';
+  import { MONTH_NAMES, addDays, endOfMonth, formatDate } from '../lib/domain/common/dates';
   import { HALF_DAY_LABELS, leaveStatusLabel } from '../lib/domain/leave/types';
   import type { LeaveStatus } from '../lib/domain/leave/types';
   import { pdoStatusLabel } from '../lib/domain/duty/types';
-  import { categoryName, daysText, numberFrom, rangeText, statusTone } from '../lib/app/ui';
+  import {
+    categoryChipClass,
+    categoryName,
+    daysText,
+    numberFrom,
+    rangeText,
+    statusTone
+  } from '../lib/app/ui';
 
-  let tab = $state<'search' | 'leave' | 'duty'>('search');
+  let tab = $state<'quick' | 'search' | 'leave' | 'duty'>('quick');
   let context = $state<LeaveValidationContext | null>(null);
   let contextError = $state('');
 
@@ -134,6 +143,148 @@
       notes = '';
       halfDay = '';
     }
+  }
+
+  // -------------------------------------------------------------- quick planner
+  type QuickCategory = 'CL' | 'EL' | 'CCL' | 'SPCL';
+
+  let quickCL = $state(true);
+  let quickEL = $state(true);
+  let quickCCL = $state(true);
+  let quickSpCL = $state(true);
+  let quickPlans = $state<PlanCandidate[]>([]);
+  let quickRunning = $state(false);
+  let quickProgress = $state(0);
+  let quickStatus = $state('');
+  let quickRunToken = 0;
+
+  const quickSelected = $derived.by<QuickCategory[]>(() => {
+    const selected: QuickCategory[] = [];
+    if (quickCL) selected.push('CL');
+    if (quickEL) selected.push('EL');
+    if (quickCCL) selected.push('CCL');
+    if (quickSpCL) selected.push('SPCL');
+    return selected;
+  });
+
+  function wait(milliseconds: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, milliseconds));
+  }
+
+  function pickQuickCandidates(
+    candidates: PlanCandidate[],
+    month: string,
+    limit: number
+  ): PlanCandidate[] {
+    const picked: PlanCandidate[] = [];
+    const seenWindows = new Set<string>();
+    for (const candidate of candidates) {
+      if (!candidate.startDate.startsWith(month)) continue;
+      const windowKey = `${candidate.startDate}:${candidate.endDate}`;
+      if (seenWindows.has(windowKey)) continue;
+      seenWindows.add(windowKey);
+      picked.push(candidate);
+      if (picked.length >= limit) break;
+    }
+    return picked;
+  }
+
+  async function runQuickPlan() {
+    if (!context || quickSelected.length === 0) return;
+
+    const categories = [...quickSelected];
+    const year = app.today.slice(0, 4);
+    const yearEnd = `${year}-12-31`;
+    const months: { startDate: string; endDate: string; month: string; label: string }[] = [];
+    let cursor = `${app.today.slice(0, 7)}-01`;
+    while (cursor <= yearEnd) {
+      const end = endOfMonth(cursor);
+      months.push({
+        startDate: cursor < app.today ? app.today : cursor,
+        endDate: end,
+        month: cursor.slice(0, 7),
+        label: `${MONTH_NAMES[Number(cursor.slice(5, 7)) - 1]} ${year}`
+      });
+      cursor = addDays(end, 1);
+    }
+
+    const token = ++quickRunToken;
+    quickPlans = [];
+    quickProgress = 0;
+    quickRunning = true;
+    quickStatus = `Preparing ${year}…`;
+    await wait(30);
+
+    try {
+      for (let monthIndex = 0; monthIndex < months.length; monthIndex += 1) {
+        if (token !== quickRunToken) return;
+        const month = months[monthIndex];
+        quickStatus = `Checking ${month.label}…`;
+        quickProgress = Math.round((monthIndex / Math.max(1, months.length)) * 100);
+        await wait(20);
+        if (token !== quickRunToken) return;
+
+        // A short trailing window lets a proposal at the end of a month carry
+        // into the next month, while the month filter keeps results unique.
+        const searchEnd = month.endDate === yearEnd ? month.endDate : addDays(month.endDate, 7);
+        const candidates = searchCandidates(
+          {
+            startDate: month.startDate,
+            endDate: searchEnd,
+            categories,
+            minBreakDays: 3,
+            maxLeaveDays: 5,
+            maxCandidates: 80
+          },
+          context
+        );
+        const picked = pickQuickCandidates(candidates, month.month, 2);
+
+        for (let candidateIndex = 0; candidateIndex < picked.length; candidateIndex += 1) {
+          if (token !== quickRunToken) return;
+          quickPlans = [...quickPlans, picked[candidateIndex]];
+          quickProgress = Math.min(
+            99,
+            Math.round(
+              ((monthIndex + (candidateIndex + 1) / picked.length) / Math.max(1, months.length)) *
+                100
+            )
+          );
+          quickStatus = `Found ${quickPlans.length} option${quickPlans.length === 1 ? '' : 's'} · ${month.label}`;
+          await wait(90);
+        }
+
+        if (token !== quickRunToken) return;
+        quickProgress = Math.round(((monthIndex + 1) / Math.max(1, months.length)) * 100);
+      }
+
+      if (token !== quickRunToken) return;
+      quickProgress = 100;
+      quickRunning = false;
+      quickStatus =
+        quickPlans.length > 0
+          ? `${quickPlans.length} option${quickPlans.length === 1 ? '' : 's'} found across the remaining months of ${year}.`
+          : `No valid long-break options were found in the remaining months of ${year}.`;
+    } catch (error) {
+      if (token !== quickRunToken) return;
+      quickRunning = false;
+      quickStatus = messageOf(error);
+    }
+  }
+
+  function stopQuickPlan() {
+    if (!quickRunning) return;
+    quickRunToken += 1;
+    quickRunning = false;
+    quickStatus = `Stopped after ${quickPlans.length} option${quickPlans.length === 1 ? '' : 's'}.`;
+  }
+
+  function clearQuickPlan() {
+    quickRunToken += 1;
+    quickRunning = false;
+    quickPlans = [];
+    quickProgress = 0;
+    quickStatus = '';
   }
 
   // --------------------------------------------------------------------- search
@@ -315,7 +466,7 @@
 
 <PageHeader
   title="Leave planner"
-  subtitle="Check the exact rules, search for better dates, and record leave or duty."
+  subtitle="Build a long weekend or full week, check the exact rules, and record leave or duty."
 >
   <Badge tone="info">Policy v{app.activePolicy?.version ?? '—'}</Badge>
 </PageHeader>
@@ -324,12 +475,22 @@
   <button
     type="button"
     class="tab"
+    class:active={tab === 'quick'}
+    role="tab"
+    aria-selected={tab === 'quick'}
+    onclick={() => (tab = 'quick')}
+  >
+    Quick planner
+  </button>
+  <button
+    type="button"
+    class="tab"
     class:active={tab === 'search'}
     role="tab"
     aria-selected={tab === 'search'}
     onclick={() => (tab = 'search')}
   >
-    Find dates
+    Advanced search
   </button>
   <button
     type="button"
@@ -369,7 +530,98 @@
   </div>
 {/if}
 
-{#if tab === 'search'}
+{#if tab === 'quick'}
+  <div class="stack">
+    <Card>
+      <div class="section-card-head">
+        <div>
+          <h2>Quick planner</h2>
+          <span class="tiny muted">Scans the remaining months of {app.today.slice(0, 4)} for longer breaks.</span>
+        </div>
+        <Badge tone="info">Long weekends</Badge>
+      </div>
+
+      <div class="quick-toggle-label">Leave types to consider</div>
+      <div class="quick-toggle-row">
+        <Toggle bind:checked={quickCL} label="CL" disabled={quickRunning} />
+        <Toggle bind:checked={quickEL} label="EL" disabled={quickRunning} />
+        <Toggle bind:checked={quickCCL} label="CCL" disabled={quickRunning} />
+        <Toggle bind:checked={quickSpCL} label="SpCL" disabled={quickRunning} />
+      </div>
+
+      <div class="quick-plan-actions">
+        <Button
+          onclick={runQuickPlan}
+          disabled={!context || quickSelected.length === 0 || quickRunning}
+        >
+          <Sparkles size={14} /> Plan now
+        </Button>
+        {#if quickPlans.length > 0 && quickRunning}
+          <Button variant="secondary" onclick={stopQuickPlan}>Stop</Button>
+        {/if}
+        {#if quickPlans.length > 0}
+          <Button variant="ghost" onclick={clearQuickPlan}>Clear</Button>
+        {/if}
+      </div>
+
+      {#if quickSelected.length === 0}
+        <p class="tiny muted quick-plan-note">Select at least one leave type to start planning.</p>
+      {:else}
+        <p class="tiny muted quick-plan-note">
+          Uses weekends, public holidays and recorded leave. Sundays are shown as fixed leave.
+        </p>
+      {/if}
+
+      {#if quickRunning}
+        <div class="quick-plan-progress">
+          <ProgressBar value={quickProgress} max={100} label={quickStatus} />
+        </div>
+      {:else if quickStatus}
+        <p class="tiny muted quick-plan-status" aria-live="polite">{quickStatus}</p>
+      {/if}
+    </Card>
+
+    {#if quickPlans.length > 0}
+      <div class="quick-plan-results" aria-live="polite">
+        {#each quickPlans as plan, index (plan.id)}
+          <Card>
+            <div class="quick-plan-result-head">
+              <div class="row" style="flex-wrap:wrap">
+                <Badge tone="neutral">Option {index + 1}</Badge>
+                <span class={categoryChipClass(plan.category)}>{plan.category}</span>
+                <strong class="small">
+                  {rangeText(plan.startDate, plan.endDate, app.settings?.dateFormat)}
+                </strong>
+              </div>
+              <Badge tone={plan.breakDays >= 7 ? 'success' : 'info'}>
+                {plan.breakDays >= 7 ? 'Full week+' : `${plan.breakDays}-day break`}
+              </Badge>
+            </div>
+
+            <div style="margin-top:8px">
+              <ProposalCalendar
+                startDate={plan.startDate}
+                endDate={plan.endDate}
+                category={plan.category}
+                leaves={app.snapshot.leaves}
+                weekStartsOn={app.settings?.weekStartsOn ?? 1}
+              />
+            </div>
+
+            <div class="between quick-plan-result-foot">
+              <span class="tiny muted">
+                {daysText(plan.leaveDays)} charged · includes adjacent weekends, holidays and recorded leave
+              </span>
+              <Button size="sm" variant="secondary" onclick={() => useCandidate(plan)}>
+                Use these dates
+              </Button>
+            </div>
+          </Card>
+        {/each}
+      </div>
+    {/if}
+  </div>
+{:else if tab === 'search'}
   <div class="stack">
     <Card>
       <div class="section-card-head">

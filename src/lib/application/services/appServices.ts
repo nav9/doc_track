@@ -54,6 +54,8 @@ import type { AttendanceRecord } from '../../domain/attendance/types';
 import type { CalendarEvent, EventName, Holiday } from '../../domain/calendar/holidays';
 import { validateHoliday } from '../../domain/calendar/holidays';
 import type { DutyRoster, RosterDoctor } from '../../domain/roster/types';
+import type { SharedLeave } from '../../domain/multiuser/types';
+import { isISODate } from '../../domain/common/types';
 import { addDays, monthKey, monthsBetween, periodBounds, todayLocal } from '../../domain/common/dates';
 import { newId, stableId } from '../../domain/common/ids';
 import { roundDays } from '../../domain/common/types';
@@ -98,6 +100,18 @@ export interface CreateLeaveInput {
 
 export interface RosterSaveOptions {
   syncDuties: boolean;
+}
+
+export interface SharedLeaveInput {
+  id?: string;
+  doctorId: string;
+  startDate: string;
+  endDate: string;
+  category: string;
+  status: SharedLeave['status'];
+  reason: string;
+  notes: string;
+  source?: SharedLeave['source'];
 }
 
 export class AppServices {
@@ -1043,7 +1057,9 @@ export class AppServices {
     const profile = snapshot.profiles[0];
     if (!profile) throw new ServiceError('NO_PROFILE', 'Complete the profile first.');
     const now = this.clock.nowISO();
-    const rosterId = roster.id || stableId('roster', profile.id, `${roster.year}-${roster.month}`);
+    const rosterId =
+      roster.id ||
+      stableId('roster', profile.id, `${roster.year}-${roster.month}`, roster.department.trim().toLowerCase());
     const previous = snapshot.rosters.find((item) => item.id === rosterId);
 
     const monthPrefix = `${roster.year}-${String(roster.month).padStart(2, '0')}`;
@@ -1084,6 +1100,21 @@ export class AppServices {
       const employment = this.primaryEmployment(snapshot);
       for (const entry of saved.entries) {
         if (!employment) break;
+        const entryDoctor = snapshot.doctors.find(
+          (doctor) =>
+            doctor.id === entry.doctorId ||
+            (doctor.employeeId &&
+              entry.employeeId &&
+              doctor.employeeId.toLowerCase() === entry.employeeId.toLowerCase()) ||
+            doctor.name.toLowerCase() === entry.doctorName.trim().toLowerCase()
+        );
+        const ownDoctor = `${profile.prefix} ${profile.name}`.replace(/\s+/g, ' ').trim();
+        const isOwnDuty =
+          entryDoctor?.profileId === profile.id ||
+          entry.doctorName.trim().toLowerCase() === ownDoctor.toLowerCase();
+        // A shared roster is still not permission to create duty records for
+        // other doctors. Only the signed-in doctor's rows sync to their calendar.
+        if (!isOwnDuty) continue;
         const policy = this.policyFor(snapshot, entry.date, employment);
         const shift =
           policy?.shifts.find((item) =>
@@ -1152,18 +1183,84 @@ export class AppServices {
 
   async saveRosterDoctor(
     input: Omit<RosterDoctor, 'createdAt' | 'updatedAt' | 'id'> & { id?: string }
-  ): Promise<void> {
+  ): Promise<RosterDoctor> {
     if (!input.name.trim()) throw new ServiceError('DOCTOR_NAME', 'Enter the doctor’s name.');
+    if (!input.employeeId.trim()) {
+      throw new ServiceError('DOCTOR_EMPLOYEE_ID', 'Enter the doctor’s employee ID.');
+    }
     const snapshot = await this.snapshot();
-    const existing = input.id ? snapshot.doctors.find((doctor) => doctor.id === input.id) : undefined;
+    const normalizedName = input.name.trim().toLowerCase();
+    const normalizedEmployeeId = input.employeeId.trim().toLowerCase();
+    const duplicate = snapshot.doctors.find(
+      (doctor) =>
+        doctor.id !== input.id &&
+        (doctor.employeeId.trim().toLowerCase() === normalizedEmployeeId ||
+          doctor.name.trim().toLowerCase() === normalizedName)
+    );
+    const existing = input.id
+      ? snapshot.doctors.find((doctor) => doctor.id === input.id)
+      : duplicate;
     const now = this.clock.nowISO();
-    await this.repos.doctors.put({
+    const doctor: RosterDoctor = {
       ...input,
-      id: input.id ?? newId('doctor'),
+      id: existing?.id ?? newId('doctor'),
       name: input.name.trim(),
+      employeeId: input.employeeId.trim(),
       createdAt: existing?.createdAt ?? now,
       updatedAt: now
-    });
+    };
+    await this.repos.doctors.put(doctor);
+    return doctor;
+  }
+
+  async deleteRosterDoctor(id: string): Promise<void> {
+    const snapshot = await this.snapshot();
+    if (!snapshot.doctors.some((doctor) => doctor.id === id)) return;
+    await this.repos.doctors.remove(id);
+    await this.log('INFO', 'roster', 'Doctor removed from roster list', id.slice(0, 24));
+  }
+
+  async saveSharedLeave(input: SharedLeaveInput): Promise<SharedLeave> {
+    if (!isISODate(input.startDate) || !isISODate(input.endDate)) {
+      throw new ServiceError('SHARED_LEAVE_DATE', 'Enter valid start and end dates.');
+    }
+    if (input.endDate < input.startDate) {
+      throw new ServiceError('SHARED_LEAVE_RANGE', 'The leave end date is before the start date.');
+    }
+    const snapshot = await this.snapshot();
+    const doctor = snapshot.doctors.find((item) => item.id === input.doctorId);
+    if (!doctor) {
+      throw new ServiceError('SHARED_DOCTOR', 'Choose a doctor from the shared doctor list.');
+    }
+    const now = this.clock.nowISO();
+    const category = input.category.trim().toUpperCase() || 'CL';
+    const id =
+      input.id ?? stableId('sharedleave', doctor.id, input.startDate, input.endDate, category);
+    const existing = snapshot.sharedLeaves.find((leave) => leave.id === id);
+    const leave: SharedLeave = {
+      id,
+      doctorId: doctor.id,
+      doctorName: doctor.name,
+      employeeId: doctor.employeeId,
+      department: doctor.department,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      category,
+      status: input.status,
+      source: input.source ?? 'manual',
+      reason: input.reason.trim(),
+      notes: input.notes.trim(),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now
+    };
+    await this.repos.sharedLeaves.put(leave);
+    await this.log('INFO', 'multiuser', 'Shared leave saved', `${doctor.employeeId} ${leave.startDate}`);
+    return leave;
+  }
+
+  async deleteSharedLeave(id: string): Promise<void> {
+    await this.repos.sharedLeaves.remove(id);
+    await this.log('INFO', 'multiuser', 'Shared leave removed', id.slice(0, 24));
   }
 
   copyPreviousMonth(
@@ -1280,6 +1377,9 @@ export class AppServices {
           : full.rosters
       };
     }
+    if (kind === 'multiuser') {
+      return { ...base, doctors: full.doctors, sharedLeaves: full.sharedLeaves };
+    }
     return {
       ...base,
       holidays: options.year
@@ -1301,7 +1401,8 @@ export class AppServices {
         leave: 'Leave history',
         policy: 'Leave policy package',
         roster: 'Duty roster',
-        holidays: 'Holiday list'
+        holidays: 'Holiday list',
+        multiuser: 'Multi User doctors and shared leave'
       } as const)[kind];
     const text = await encodeEnvelope({
       kind,
@@ -1399,6 +1500,7 @@ export class AppServices {
       mergeCollection('eventNames', preview.snapshot.eventNames);
       mergeCollection('doctors', preview.snapshot.doctors);
       mergeCollection('rosters', preview.snapshot.rosters);
+      mergeCollection('sharedLeaves', preview.snapshot.sharedLeaves);
 
       // Imported policy versions always arrive as drafts: a published version
       // is immutable and must never be silently replaced by an import.

@@ -13,7 +13,9 @@ export default defineConfig({
   use: {
     baseURL,
     viewport: { width: 1280, height: 900 },
-    channel: 'chrome',
+    // Local runs use the installed Google Chrome. CI installs and uses the
+    // Playwright-managed Chromium build instead of depending on a runner image.
+    channel: process.env.CI ? undefined : 'chrome',
     trace: 'retain-on-failure'
   },
   webServer: process.env.PLAYWRIGHT_BASE_URL

@@ -8,7 +8,7 @@
 import { openDB, type IDBPDatabase } from 'idb';
 
 export const DB_NAME = 'doctrack';
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 
 export const VALUE_STORES = [
   'profiles',
@@ -25,6 +25,7 @@ export const VALUE_STORES = [
   'eventNames',
   'doctors',
   'rosters',
+  'sharedLeaves',
   'versions',
   'logs'
 ] as const;
@@ -67,8 +68,9 @@ export function openDatabase(): Promise<IDBPDatabase<unknown>> {
             : database.createObjectStore('logs', { keyPath: 'id' });
           logs?.createIndex('at', 'at');
         }
-        // Future migrations:
-        // if (oldVersion < 2) { ... }
+        if (oldVersion < 2 && !database.objectStoreNames.contains('sharedLeaves')) {
+          database.createObjectStore('sharedLeaves', { keyPath: 'id' });
+        }
       },
       blocked() {
         console.warn('[db] another tab is holding the old database version');

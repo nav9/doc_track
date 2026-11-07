@@ -7,6 +7,7 @@ import type { Duty, PdoRecord } from '../../domain/duty/types';
 import type { AttendanceRecord } from '../../domain/attendance/types';
 import type { CalendarEvent, EventName, Holiday } from '../../domain/calendar/holidays';
 import type { DutyRoster, RosterDoctor } from '../../domain/roster/types';
+import type { SharedLeave } from '../../domain/multiuser/types';
 
 export interface DataSnapshot {
   profiles: DoctorProfile[];
@@ -23,6 +24,7 @@ export interface DataSnapshot {
   eventNames: EventName[];
   doctors: RosterDoctor[];
   rosters: DutyRoster[];
+  sharedLeaves: SharedLeave[];
   settings: AppSettings[];
 }
 
@@ -40,7 +42,8 @@ export const SNAPSHOT_COLLECTIONS = [
   'events',
   'eventNames',
   'doctors',
-  'rosters'
+  'rosters',
+  'sharedLeaves'
 ] as const;
 
 export type SnapshotCollection = (typeof SNAPSHOT_COLLECTIONS)[number];
@@ -61,6 +64,7 @@ export function emptySnapshot(): DataSnapshot {
     eventNames: [],
     doctors: [],
     rosters: [],
+    sharedLeaves: [],
     settings: []
   };
 }
@@ -77,6 +81,7 @@ export interface SnapshotCounts {
   holidays: number;
   events: number;
   rosterMonths: number;
+  sharedLeaves: number;
 }
 
 export function countSnapshot(snapshot: DataSnapshot): SnapshotCounts {
@@ -91,6 +96,7 @@ export function countSnapshot(snapshot: DataSnapshot): SnapshotCounts {
     attendanceRecords: snapshot.attendance.length,
     holidays: snapshot.holidays.length,
     events: snapshot.events.length,
-    rosterMonths: snapshot.rosters.length
+    rosterMonths: snapshot.rosters.length,
+    sharedLeaves: snapshot.sharedLeaves.length
   };
 }

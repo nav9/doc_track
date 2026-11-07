@@ -8,9 +8,10 @@ consequences, tracks NMC attendance, and produces a monthly A4 duty roster PDF.
 Everything is stored in the browser's IndexedDB. There is no account, server,
 analytics, telemetry or external personal-data request.
 
-**Phase 1 status:** implemented and verified by type check, 142 Vitest tests,
-4 Playwright browser journeys and a production build. Phase 2 (multi-doctor workflows, automated roster
-fairness, HR approvals) has not been started.
+**Phase 1 status:** implemented and verified by type check, 151 Vitest tests,
+5 Playwright browser journeys and a production build. Multi User planning is
+local-first; authenticated multi-device sync and an HOD approval queue remain
+future work.
 
 - **Application (target URL):** https://nav9.github.io/doc_track/
 - **Policy Studio:** https://nav9.github.io/doc_track/#/admin/policy-studio
@@ -103,7 +104,14 @@ persistent storage where the browser supports it, but cannot prevent deletion.
 `.github/workflows/deploy.yml` builds and publishes `dist/` on every push to
 `main` (or by manual dispatch). In the repository, set **Settings → Pages →
 Build and deployment → Source** to **GitHub Actions**. The workflow sets
-`BASE_PATH=/doc_track/` so assets resolve under the project path.
+`BASE_PATH=/<repository-name>/` so assets resolve under the project path. It
+runs the type check, unit tests and Playwright journeys before publishing. CI
+installs its own Chromium; local Playwright runs continue to use system Chrome.
+
+The Pages source is a one-time repository setting. A workflow using the default
+`GITHUB_TOKEN` cannot enable Pages on its own; if the source is not set to
+**GitHub Actions**, the deployment job stops with a Pages configuration error.
+Once enabled, every successful push to `main` publishes the site.
 
 The app uses hash routing (`#/planner`, `#/admin/policy-studio`), so deep links
 work on GitHub Pages without server rewrites.

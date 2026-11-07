@@ -107,16 +107,20 @@
         {#each week as date (date)}
           {@const proposed = date >= startDate && date <= endDate}
           {@const confirmed = leavesByDate.get(date) ?? []}
+          {@const sunday = dayOfWeek(date) === 0}
           <div
             class="proposal-cell"
             class:proposed-day={proposed}
             class:today={date === today}
             role="gridcell"
-            aria-label={`${formatDate(date)}${proposed ? `, ${category} proposal` : ''}${confirmed.length ? `, recorded ${confirmed.map((leave) => leave.category).join(', ')}` : ''}`}
+            aria-label={`${formatDate(date)}${sunday ? ', Sunday leave' : ''}${proposed ? `, ${category} proposal` : ''}${confirmed.length ? `, recorded ${confirmed.map((leave) => leave.category).join(', ')}` : ''}`}
             title={formatDate(date)}
           >
             <span class="proposal-day">{Number(date.slice(8, 10))}</span>
             <div class="proposal-marks">
+              {#if sunday}
+                <span class="leave-cal-chip weekly-off" title="Sunday · weekly leave">Leave</span>
+              {/if}
               {#each confirmed as leave (leave.id)}
                 <span
                   class="leave-cal-chip confirmed cat-{toneForCategory(leave.category)}"

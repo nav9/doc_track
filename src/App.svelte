@@ -15,6 +15,7 @@
     ShieldCheck,
     Stethoscope,
     Sun,
+    Users,
     UserRound,
     X
   } from '@lucide/svelte';
@@ -26,6 +27,7 @@
   import Dashboard from './routes/Dashboard.svelte';
   import Planner from './routes/Planner.svelte';
   import Roster from './routes/Roster.svelte';
+  import MultiUser from './routes/MultiUser.svelte';
   import LeaveRules from './routes/LeaveRules.svelte';
   import Attendance from './routes/Attendance.svelte';
   import Account from './routes/Account.svelte';
@@ -41,6 +43,7 @@
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/planner', label: 'Planner', icon: CalendarDays },
     { path: '/roster', label: 'Duty roster', icon: ClipboardList },
+    { path: '/multi-user', label: 'Multi User', icon: Users },
     { path: '/leave-rules', label: 'Leave rules', icon: BookOpenText },
     { path: '/attendance', label: 'Attendance', icon: CalendarCheck }
   ];
@@ -222,6 +225,8 @@
         <Planner />
       {:else if path === '/roster'}
         <Roster />
+      {:else if path === '/multi-user'}
+        <MultiUser />
       {:else if path === '/leave-rules'}
         <LeaveRules />
       {:else if path === '/attendance'}

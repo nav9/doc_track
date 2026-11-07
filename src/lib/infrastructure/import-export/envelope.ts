@@ -142,7 +142,10 @@ async function decodeChunk(chunk: string): Promise<Envelope> {
   if (header.app !== APP_TAG) {
     throw new Error('This text was not created by DocTrack.');
   }
-  if (!header.kind || !['full', 'leave', 'policy', 'roster', 'holidays'].includes(header.kind)) {
+  if (
+    !header.kind ||
+    !['full', 'leave', 'policy', 'roster', 'holidays', 'multiuser'].includes(header.kind)
+  ) {
     throw new Error('The data block does not declare a supported data kind.');
   }
   if (typeof header.createdAt !== 'string') {
@@ -343,6 +346,20 @@ export function normalizeSnapshotData(
         updatedAt: str(record.updatedAt, new Date().toISOString())
       };
     });
+    take('eventNames', (record) => {
+      const id = recordId(record, 'evname');
+      if (!id) return null;
+      return {
+        id,
+        name: str(record.name),
+        useCount: num(record.useCount, 1),
+        createdAt: str(record.createdAt, new Date().toISOString()),
+        updatedAt: str(record.updatedAt, new Date().toISOString())
+      };
+    });
+  }
+
+  if (kind === 'full' || kind === 'multiuser') {
     take('doctors', (record) => {
       const id = recordId(record, 'doctor');
       if (!id) return null;
@@ -353,19 +370,37 @@ export function normalizeSnapshotData(
         department: str(record.department),
         unit: str(record.unit),
         designation: str(record.designation),
+        speciality: str(record.speciality),
+        contactPhone: str(record.contactPhone),
         profileId: str(record.profileId) || null,
         notes: str(record.notes),
         createdAt: str(record.createdAt, new Date().toISOString()),
         updatedAt: str(record.updatedAt, new Date().toISOString())
       };
     });
-    take('eventNames', (record) => {
-      const id = recordId(record, 'evname');
-      if (!id) return null;
+
+    take('sharedLeaves', (record) => {
+      const id = recordId(record, 'sharedleave');
+      if (!id || !isISODate(str(record.startDate)) || !isISODate(str(record.endDate))) {
+        return null;
+      }
       return {
         id,
-        name: str(record.name),
-        useCount: num(record.useCount, 1),
+        doctorId: str(record.doctorId),
+        doctorName: str(record.doctorName),
+        employeeId: str(record.employeeId),
+        department: str(record.department),
+        startDate: str(record.startDate),
+        endDate: str(record.endDate),
+        category: str(record.category, 'CL').toUpperCase(),
+        status: (['planned', 'pending', 'approved', 'rejected', 'cancelled'].includes(
+          str(record.status)
+        )
+          ? str(record.status)
+          : 'planned') as 'planned' | 'pending' | 'approved' | 'rejected' | 'cancelled',
+        source: 'import' as const,
+        reason: str(record.reason),
+        notes: str(record.notes),
         createdAt: str(record.createdAt, new Date().toISOString()),
         updatedAt: str(record.updatedAt, new Date().toISOString())
       };
@@ -581,6 +616,22 @@ export function normalizeSnapshotData(
         hospitalName: str(record.hospitalName),
         entries: record.entries as never,
         notes: str(record.notes),
+        unitCount: num(record.unitCount, 4),
+        unitStyle: (['roman', 'number', 'word'].includes(str(record.unitStyle))
+          ? str(record.unitStyle)
+          : 'roman') as 'roman' | 'number' | 'word',
+        dateFormat: str(record.dateFormat, 'dd MMM yyyy') as
+          | 'dd MMM yyyy'
+          | 'dd/MM/yyyy'
+          | 'MM/dd/yyyy'
+          | 'yyyy-MM-dd'
+          | 'EEE, dd MMM yyyy'
+          | 'dd MMM yyyy (EEE)'
+          | 'dd-MM-yyyy',
+        showLeaveWarnings: record.showLeaveWarnings !== false,
+        leaveWarningStatuses: (Array.isArray(record.leaveWarningStatuses)
+          ? record.leaveWarningStatuses
+          : ['planned', 'pending', 'approved']) as never,
         createdAt: str(record.createdAt, new Date().toISOString()),
         updatedAt: str(record.updatedAt, new Date().toISOString())
       };
@@ -696,6 +747,12 @@ export function summaryLines(env: Envelope, snapshot: DataSnapshot): ImportSumma
     lines.push({
       label: 'Rosters',
       detail: snapshot.rosters.map((roster) => `${roster.month}/${roster.year}`).join(', ')
+    });
+  }
+  if (snapshot.sharedLeaves.length) {
+    lines.push({
+      label: 'Shared leave',
+      detail: `${snapshot.sharedLeaves.length} shared leave record(s) for ${snapshot.doctors.length} known doctor(s)`
     });
   }
   if (snapshot.events.length) {

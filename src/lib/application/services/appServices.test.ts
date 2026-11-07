@@ -265,6 +265,42 @@ describe('AppServices integration', () => {
     expect((await services.snapshot()).policies.length).toBe(before);
   });
 
+  it('stores shared leave without changing the signed-in ledger and exports it', async () => {
+    await createProfile(services);
+    const before = await services.snapshot();
+    const doctor = await services.saveRosterDoctor({
+      name: 'Dr. Meera Nair',
+      employeeId: 'MC-900',
+      department: 'Orthopaedics',
+      designation: 'Senior Resident',
+      speciality: 'Joint Replacement',
+      unit: 'Unit II',
+      profileId: null,
+      notes: ''
+    });
+    expect(doctor.id).toBeTruthy();
+    const leave = await services.saveSharedLeave({
+      doctorId: doctor.id,
+      startDate: '2026-11-10',
+      endDate: '2026-11-12',
+      category: 'CL',
+      status: 'approved',
+      reason: 'Family function',
+      notes: '',
+      source: 'whatsapp'
+    });
+    expect(leave.doctorName).toBe('Dr. Meera Nair');
+    const after = await services.snapshot();
+    expect(after.sharedLeaves).toHaveLength(1);
+    expect(after.ledger).toHaveLength(before.ledger.length);
+
+    const exported = await services.exportText('multiuser');
+    const preview = await services.previewImport(exported.text);
+    expect(preview.kind).toBe('multiuser');
+    expect(preview.counts.sharedLeaves).toBe(1);
+    expect(preview.snapshot.doctors).toHaveLength(1);
+  });
+
   it('clones reactive policy objects and publishes a new version without mutating history', async () => {
     const before = await services.snapshot();
     const active = before.policies[0];

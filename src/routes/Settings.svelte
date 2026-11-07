@@ -297,6 +297,7 @@
             <div><dt>Duties</dt><dd>{preview.counts.duties}</dd></div>
             <div><dt>Holidays</dt><dd>{preview.counts.holidays}</dd></div>
             <div><dt>Rosters</dt><dd>{preview.counts.rosterMonths}</dd></div>
+            <div><dt>Shared leave</dt><dd>{preview.counts.sharedLeaves}</dd></div>
             <div><dt>Policies</dt><dd>{preview.counts.policyVersions}</dd></div>
           </dl>
           {#if preview.lines.length > 0}
@@ -333,7 +334,8 @@
             { value: 'leave', label: 'Leave history and ledger' },
             { value: 'policy', label: 'Policy package' },
             { value: 'holidays', label: 'Holiday list' },
-            { value: 'roster', label: 'Duty rosters' }
+            { value: 'roster', label: 'Duty rosters' },
+            { value: 'multiuser', label: 'Multi User doctors and shared leave' }
           ]}
         />
         <div class="row" style="margin-top:6px">

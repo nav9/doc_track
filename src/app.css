@@ -1107,6 +1107,267 @@ h3 {
   font-size: 10.5px;
 }
 
+/* Compact three-row leave metrics. Cards are intentionally borderless when a
+ * used or pending value is zero so the grid still reserves its space without
+ * drawing an empty panel. */
+.leave-metrics {
+  margin-bottom: 12px;
+}
+
+.leave-metrics-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+
+.leave-metrics-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.leave-metrics-head h2 {
+  font-size: 13.5px;
+}
+
+.leave-metric-row {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 8px;
+  align-items: stretch;
+}
+
+.leave-metric-row + .leave-metric-row {
+  margin-top: 6px;
+}
+
+.leave-metric-row-label {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+}
+
+.leave-metric-row-label strong {
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.055em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.leave-metric-row-label .tiny {
+  font-size: 9px;
+  line-height: 1.2;
+}
+
+.leave-metric-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.leave-metric-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  min-height: 42px;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+  color: var(--text);
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.leave-metric-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 32%, var(--border));
+  background: var(--panel-2);
+}
+
+.leave-metric-card.is-empty {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.leave-metric-card.is-empty:hover {
+  border-color: var(--border);
+  background: var(--panel-2);
+}
+
+.leave-metric-card.is-empty .leave-metric-reading strong {
+  color: var(--muted);
+}
+
+.leave-metric-card.is-empty .chip {
+  opacity: 0.65;
+}
+
+.leave-metric-reading {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.leave-metric-reading strong {
+  font-size: 1.05rem;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.leave-metric-reading span {
+  color: var(--muted);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.leave-usage-card {
+  margin-bottom: 12px;
+}
+
+.leave-usage-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.leave-usage-row {
+  display: grid;
+  grid-template-columns: minmax(92px, 0.8fr) repeat(3, minmax(58px, 0.5fr)) minmax(130px, 1.8fr);
+  gap: 12px;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.leave-usage-head {
+  padding-top: 0;
+  padding-bottom: 4px;
+  color: var(--muted);
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.leave-usage-head span:nth-child(2),
+.leave-usage-head span:nth-child(3),
+.leave-usage-head span:nth-child(4) {
+  text-align: right;
+}
+
+.leave-usage-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.leave-usage-name .small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leave-usage-value {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.leave-usage-value strong {
+  font-size: 12.5px;
+  font-weight: 730;
+}
+
+.leave-usage-mobile-label {
+  display: none;
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.leave-usage-meter-cell {
+  min-width: 0;
+}
+
+.leave-usage-meter {
+  display: flex;
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel-2);
+}
+
+.leave-usage-used,
+.leave-usage-pending {
+  height: 100%;
+  transition: width 0.25s ease;
+}
+
+.leave-usage-used {
+  background: var(--primary);
+}
+
+.leave-usage-pending {
+  background: var(--warning);
+  opacity: 0.8;
+}
+
+.leave-usage-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.leave-usage-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.leave-usage-key i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.leave-key-used {
+  background: var(--primary);
+}
+
+.leave-key-pending {
+  background: var(--warning);
+}
+
+.leave-key-available {
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+}
+
 .banner {
   display: flex;
   align-items: flex-start;
@@ -1330,6 +1591,76 @@ h3 {
   vertical-align: middle;
 }
 
+/* Quick planner controls and streamed proposal cards. */
+.quick-toggle-label {
+  margin: 1px 0 4px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.quick-toggle-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.quick-toggle-row .toggle-row {
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 5px 7px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+
+.quick-toggle-row .toggle-row input[type='checkbox'] {
+  margin-top: 0;
+}
+
+.quick-toggle-row .toggle-label {
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.quick-plan-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.quick-plan-note,
+.quick-plan-status {
+  margin: 8px 0 0;
+}
+
+.quick-plan-progress {
+  margin-top: 10px;
+}
+
+.quick-plan-results {
+  display: grid;
+  gap: 12px;
+}
+
+.quick-plan-result-head,
+.quick-plan-result-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.quick-plan-result-foot {
+  margin-top: 7px;
+}
+
 /* Compact proposal calendar: only the complete weeks touched by a proposal. */
 .proposal-cal {
   border: 1px solid var(--border);
@@ -1472,6 +1803,11 @@ h3 {
 
 .leave-cal-chip.proposed {
   border-style: dashed;
+}
+
+.leave-cal-chip.weekly-off {
+  background: var(--panel-2);
+  color: var(--muted);
 }
 
 /* ---------------------------------------------------------------------------
@@ -1789,6 +2125,163 @@ h3 {
   border-bottom: 0;
 }
 
+.duty-table {
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  overflow: hidden;
+}
+
+.roster-document-head {
+  text-align: center;
+  padding: 2px 0 12px;
+}
+
+.roster-document-head h2 {
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: 0.02em;
+}
+
+.roster-document-head p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.roster-document-head span {
+  display: inline-block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.duty-row {
+  display: grid;
+  grid-template-columns: 26px 110px 90px 72px minmax(180px, 1fr) 30px;
+  gap: 7px;
+  align-items: center;
+  padding: 5px 7px;
+}
+
+.duty-head {
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.duty-entry {
+  border-bottom: 1px solid var(--border);
+}
+
+.duty-entry:last-child {
+  border-bottom: 0;
+}
+
+.duty-date,
+.duty-day {
+  font-size: 12px;
+}
+
+.duty-day {
+  color: var(--muted);
+}
+
+.duty-unit {
+  text-align: center;
+}
+
+.duty-row.row-error {
+  background: var(--danger-soft);
+}
+
+.duty-row.row-warning {
+  background: var(--warning-soft);
+}
+
+.duty-entry > .error-text,
+.duty-entry > .warning-text {
+  padding: 4px 8px 6px 40px;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.error-text {
+  color: var(--danger);
+}
+
+.warning-text {
+  color: var(--warning);
+}
+
+.own-doctor .duty-row:not(.row-error):not(.row-warning) {
+  background: var(--danger-soft);
+  box-shadow: inset 3px 0 0 var(--danger);
+  color: var(--danger);
+}
+
+[data-colorblind='true'] .own-doctor .duty-row:not(.row-error):not(.row-warning) {
+  background: var(--purple-soft);
+  box-shadow: inset 3px 0 0 var(--purple);
+  color: var(--purple);
+}
+
+.roster-note {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 11.5px;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.banner-success {
+  background: var(--success-soft);
+  border-color: color-mix(in srgb, var(--success) 38%, transparent);
+}
+
+@media (max-width: 980px) {
+  .two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .duty-row {
+    grid-template-columns: 24px minmax(90px, 1fr) 80px 60px minmax(120px, 1.3fr) 26px;
+    gap: 4px;
+    padding: 5px 4px;
+  }
+
+  .duty-date,
+  .duty-day,
+  .duty-row .input-base {
+    font-size: 10px;
+    padding: 5px;
+  }
+
+  .leave-metric-row {
+    grid-template-columns: 86px minmax(0, 1fr);
+  }
+
+  .leave-usage-row {
+    grid-template-columns: minmax(76px, 0.9fr) repeat(3, minmax(44px, 0.5fr)) minmax(90px, 1.4fr);
+    gap: 8px;
+  }
+
+  .leave-usage-name .small {
+    display: none;
+  }
+}
+
 .roster-label {
   display: none;
 }
@@ -1885,6 +2378,66 @@ h3 {
 
   .grid-4 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .leave-metric-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .leave-metric-row-label {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 5px;
+  }
+
+  .leave-metric-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .leave-metric-card {
+    min-height: 40px;
+  }
+
+  .quick-toggle-row {
+    gap: 4px;
+  }
+
+  .quick-toggle-row .toggle-row {
+    gap: 4px;
+    padding: 5px 5px;
+  }
+
+  .leave-usage-head {
+    display: none;
+  }
+
+  .leave-usage-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px 8px;
+    padding: 8px 0;
+  }
+
+  .leave-usage-name {
+    grid-column: 1 / -1;
+  }
+
+  .leave-usage-name .small {
+    display: block;
+  }
+
+  .leave-usage-value {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+  }
+
+  .leave-usage-mobile-label {
+    display: block;
+  }
+
+  .leave-usage-meter-cell {
+    grid-column: 1 / -1;
   }
 
   .cal-cell {

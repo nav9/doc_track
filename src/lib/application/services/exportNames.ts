@@ -6,7 +6,8 @@ const PREFIX: Record<ExportKind, string> = {
   leave: 'DocTrack_LeaveHistory',
   policy: 'DocTrack_Policy',
   roster: 'DocTrack_DutyRoster',
-  holidays: 'DocTrack_Holidays'
+  holidays: 'DocTrack_Holidays',
+  multiuser: 'DocTrack_MultiUser'
 };
 
 export function fileNameForExport(kind: ExportKind, date: Date): string {

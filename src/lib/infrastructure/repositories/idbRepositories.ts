@@ -16,6 +16,7 @@ import type { Duty, PdoRecord } from '../../domain/duty/types';
 import type { AttendanceRecord } from '../../domain/attendance/types';
 import type { CalendarEvent, EventName, Holiday } from '../../domain/calendar/holidays';
 import type { DutyRoster, RosterDoctor } from '../../domain/roster/types';
+import type { SharedLeave } from '../../domain/multiuser/types';
 import type { LogEntry } from '../../domain/settings/types';
 import type { DataSnapshot } from '../../application/dto/snapshot';
 import { SNAPSHOT_COLLECTIONS } from '../../application/dto/snapshot';
@@ -92,6 +93,7 @@ export function createIndexedDbRepositories(db: IDBPDatabase<unknown>): Reposito
         eventNames: [],
         doctors: [],
         rosters: [],
+        sharedLeaves: [],
         settings: []
       } as DataSnapshot;
       // Snapshot collections only: version history and logs must survive an
@@ -142,6 +144,7 @@ export function createIndexedDbRepositories(db: IDBPDatabase<unknown>): Reposito
     eventNames: collection<EventName>(db, 'eventNames'),
     doctors: collection<RosterDoctor>(db, 'doctors'),
     rosters: collection<DutyRoster>(db, 'rosters'),
+    sharedLeaves: collection<SharedLeave>(db, 'sharedLeaves'),
     versions: collection<DataVersion>(db, 'versions'),
     logs: collection<LogEntry>(db, 'logs'),
     async close() {

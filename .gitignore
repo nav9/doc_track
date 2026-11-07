@@ -1,13 +1,6 @@
 # ==============================================================================
 # Custom 
-PHASE1_IMPLEMENTATION_PROMPT.md
-PHASE2_IMPLEMENTATION_PROMPT.md
-PHASE3_IMPLEMENTATION_PROMPT.md
-ARCHITECTURE.md          
-DECISIONS.md             
-PHASE1_PROGRESS.md
-POLICY_ASSUMPTIONS.md
-*.txt
+prompts/
 
 # Playwright
 test-results/

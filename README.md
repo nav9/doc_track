@@ -1,7 +1,7 @@
 # DocTrack — Doctor Leave Planner
 
-DocTrack is an offline-first Progressive Web Application for doctors at a medical
-college hospital. It plans leave against the department's leave rules, derives
+DocTrack is a local-first web application for doctors at a medical college
+hospital. It plans leave against the department's leave rules, derives
 balances from a transaction ledger, records night duties and their PDO/CCL
 consequences, tracks NMC attendance, and produces a monthly A4 duty roster PDF.
 
@@ -50,8 +50,8 @@ by decision D-006.
 - **Data management** — full/leave/policy exports, validated imports with a
   preview, autosave before import, full version snapshots with rollback, activity
   logs, JSON/text backup and restore, and CSV ledger export.
-- **PWA** — installable, precached app shell, fonts, icons and the lazy PDF
-  chunk; updates use `autoUpdate` and the app works offline after the first load.
+- **Local-first web app** — runs as an ordinary Svelte site. PWA installation,
+  service-worker precaching and offline startup are deferred.
 
 ## Run locally
 
@@ -75,20 +75,23 @@ npm run build    # production build into dist/
 npm run preview  # serve the production build
 ```
 
+Or use the interactive developer menu:
+
+```bash
+python3 menu.py
+```
+
+It builds, cleans and builds, runs the app, and can launch a separate test-data
+origin at http://127.0.0.1:5174/ with a sample profile, leave adjustment, event,
+attendance and roster doctors.
+
 A GitHub Pages build uses the repository base path:
 
 ```bash
 BASE_PATH=/doc_track/ npm run build
 ```
 
-## Offline installation
-
-1. Open the deployed site in Chrome, Edge, Safari or Firefox while online.
-2. Wait for the first load to finish; the service worker precaches the app shell,
-   hashed JS/CSS, the local Inter font, icons and the PDF chunk.
-3. Use the browser's **Install app** / **Add to Home Screen** action.
-4. After that, opening DocTrack without a network connection uses the cached
-   application. Personal records are read from IndexedDB on the device.
+## Data safety
 
 Browser storage is not a backup. Clearing site data, using private browsing, or
 an operating system cleanup can delete records. Export a full backup from
@@ -100,8 +103,7 @@ persistent storage where the browser supports it, but cannot prevent deletion.
 `.github/workflows/deploy.yml` builds and publishes `dist/` on every push to
 `main` (or by manual dispatch). In the repository, set **Settings → Pages →
 Build and deployment → Source** to **GitHub Actions**. The workflow sets
-`BASE_PATH=/doc_track/` so assets and the service worker resolve under the
-project path.
+`BASE_PATH=/doc_track/` so assets resolve under the project path.
 
 The app uses hash routing (`#/planner`, `#/admin/policy-studio`), so deep links
 work on GitHub Pages without server rewrites.
@@ -134,7 +136,7 @@ src/
 │   └── app/             # reactive state, hash router, display helpers
 ├── routes/              # all screens (dashboard, planner, roster, policy studio…)
 ├── App.svelte           # shell, navigation, onboarding gate, route switch
-└── main.ts              # mount + production service-worker registration
+└── main.ts              # mount the Svelte application
 ```
 
 Business rules live in `domain`/`engines`; Svelte components call
@@ -149,7 +151,9 @@ Business rules live in `domain`/`engines`; Svelte components call
 - Playwright launches the system Google Chrome (`channel: 'chrome'`) so no
   duplicate browser download is needed. The suite covers onboarding, leave
   planning, export → import → rollback, and roster PDF generation. Real-device
-  installation and a physical airplane-mode check remain manual.
+  visual and touch checks remain manual.
+- No PWA support in Phase 1: there is no service worker, install prompt,
+  manifest generation or Workbox dependency.
 - No charting library; dashboard indicators are CSS bars. This is documented in
   `DECISIONS.md`.
 - `svelte-check` reports zero errors and zero warnings.

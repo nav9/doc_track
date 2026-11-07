@@ -35,6 +35,7 @@
   import About from './routes/About.svelte';
   import PolicyStudio from './routes/PolicyStudio.svelte';
   import { APP_VERSION } from './lib/app/version';
+  import { seedTestData } from './lib/app/testData';
 
   const primaryNav = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -72,7 +73,16 @@
 
   onMount(() => {
     initRouter();
-    void app.init();
+    void (async () => {
+      await app.init();
+      if (import.meta.env.VITE_DOCTRACK_TEST_DATA !== 'true' || !app.services) return;
+      try {
+        const seeded = await seedTestData(app.services);
+        if (seeded) await app.refresh();
+      } catch (error) {
+        console.error('[DocTrack] Test data could not be loaded.', error);
+      }
+    })();
   });
 
   function go(target: string) {
@@ -162,7 +172,7 @@
       </nav>
 
       <div class="sidebar-foot">
-        <strong style="color:#c3cede">Offline-first</strong><br />
+        <strong style="color:#c3cede">Local-first</strong><br />
         Everything stays in this browser. Export a backup regularly.
         <div style="margin-top:8px">Version {APP_VERSION}</div>
       </div>

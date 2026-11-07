@@ -19,7 +19,7 @@
     "esModuleInterop": true,
     "noEmit": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["vite/client", "vite-plugin-pwa/client"],
+    "types": ["vite/client"],
     "baseUrl": ".",
     "paths": {
       "$lib": ["src/lib"],

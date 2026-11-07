@@ -1330,6 +1330,150 @@ h3 {
   vertical-align: middle;
 }
 
+/* Compact proposal calendar: only the complete weeks touched by a proposal. */
+.proposal-cal {
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.proposal-cal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-2);
+}
+
+.proposal-cal-title {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.proposal-cal-title strong {
+  font-size: 12.5px;
+}
+
+.proposal-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 9.5px;
+  color: var(--muted);
+}
+
+.proposal-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.proposal-key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--primary);
+  border-radius: 3px;
+  background: var(--primary-soft);
+}
+
+.proposal-key-proposed {
+  border-style: dashed;
+  background: transparent;
+}
+
+.proposal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.proposal-dow {
+  background: var(--panel-2);
+}
+
+.proposal-dow-cell {
+  padding: 4px 2px;
+  text-align: center;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.proposal-week {
+  border-top: 1px solid var(--border);
+}
+
+.proposal-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  min-height: 54px;
+  padding: 3px;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.proposal-cell:nth-child(7n) {
+  border-right: 0;
+}
+
+.proposal-cell.proposed-day {
+  background: color-mix(in srgb, var(--primary-soft) 62%, var(--panel));
+}
+
+.proposal-day {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.proposal-cell.today .proposal-day {
+  background: var(--primary);
+  color: var(--primary-fg);
+}
+
+.proposal-marks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.leave-cal-chip {
+  display: block;
+  max-width: 100%;
+  padding: 0 3px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  font-size: 8.5px;
+  font-weight: 750;
+  line-height: 1.45;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.leave-cal-chip.proposed {
+  border-style: dashed;
+}
+
 /* ---------------------------------------------------------------------------
  * Tabs, tables, dialogs, toasts
  * ------------------------------------------------------------------------- */

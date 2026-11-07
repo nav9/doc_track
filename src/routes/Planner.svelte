@@ -8,6 +8,7 @@
   import Select from '../lib/components/ui/Select.svelte';
   import Badge from '../lib/components/ui/Badge.svelte';
   import EmptyState from '../lib/components/ui/EmptyState.svelte';
+  import ProposalCalendar from '../lib/components/ProposalCalendar.svelte';
   import {
     evaluateLeaveRequest,
     type LeaveEvaluation,
@@ -412,7 +413,16 @@
               </div>
               <Badge tone="info">{candidate.score}/100</Badge>
             </div>
-            <div class="tiny muted" style="margin-top:3px">
+            <div style="margin-top:8px">
+              <ProposalCalendar
+                startDate={candidate.startDate}
+                endDate={candidate.endDate}
+                category={candidate.category}
+                leaves={app.snapshot.leaves}
+                weekStartsOn={app.settings?.weekStartsOn ?? 1}
+              />
+            </div>
+            <div class="tiny muted" style="margin-top:6px">
               {daysText(candidate.leaveDays)} leave charged · {candidate.breakDays}-day break including adjacent weekends and holidays
             </div>
             {#if candidate.reasons.filter((item) => item.severity !== 'info').length > 0}

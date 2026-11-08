@@ -201,7 +201,8 @@ export const MEDICAL_COLLEGE_CATEGORIES: LeaveCategoryRule[] = [
       notes: 'Valid for three calendar months from the date earned, not the approval date (PA-001).'
     },
     approval: { required: true, notes: 'Approval is required to take CCL.' },
-    source: 'OriginalPrompt.txt — CCL: earned on qualifying duty, three-month validity from the earned date.'
+    retrospectiveAllowed: true,
+    source: 'OriginalPrompt.txt — CCL: earned on qualifying duty, three-month validity from the earned date. Retrospective CCL is allowed.'
   }),
   dayCategory({
     code: 'SPCL',

@@ -132,32 +132,30 @@
       <div class="section-card-head"><h2>Duty, PDO and CCL consequences</h2></div>
       <div class="stack-sm">
         {#each policy.rules.filter((rule) => rule.enabled) as rule (rule.id)}
-          <div class="list-row" style="align-items:flex-start">
-            <span class="chip cat-duty">{rule.trigger}</span>
-            <div class="list-main">
-              <div class="list-title">{rule.title}</div>
-              <div class="tiny muted">{rule.description}</div>
-              <div class="tiny muted" style="margin-top:2px">
-                When {TRIGGER_LABELS[rule.trigger].toLowerCase()}
-              </div>
-              {#if rule.consequences.length > 0}
-                <div class="row" style="margin-top:3px">
-                  {#each rule.consequences as consequence}
-                    <Badge tone="info">
-                      {CONSEQUENCE_LABELS[consequence.type]}{#if consequence.category} · {consequence.category}{/if}{#if consequence.amount} · {consequence.amount}{/if}
-                    </Badge>
-                  {/each}
-                </div>
-              {/if}
-              {#if Object.keys(rule.config).length > 0}
-                <div class="tiny muted" style="margin-top:3px">
-                  {#each Object.entries(rule.config) as [key, value] (key)}
-                    {key}: {configText(value)}{#if key !== Object.keys(rule.config).at(-1)}, {/if}
-                  {/each}
-                </div>
-              {/if}
-              {#if rule.notes}<div class="tiny" style="color:var(--warning);margin-top:2px">{rule.notes}</div>{/if}
+          <div class="rule-consequence">
+            <h3 class="rule-consequence-heading">{rule.trigger}</h3>
+            <div class="rule-consequence-title">{rule.title}</div>
+            <div class="tiny muted">{rule.description}</div>
+            <div class="tiny muted" style="margin-top:2px">
+              When {TRIGGER_LABELS[rule.trigger].toLowerCase()}
             </div>
+            {#if rule.consequences.length > 0}
+              <div class="row" style="margin-top:3px">
+                {#each rule.consequences as consequence}
+                  <Badge tone="info">
+                    {CONSEQUENCE_LABELS[consequence.type]}{#if consequence.category} · {consequence.category}{/if}{#if consequence.amount} · {consequence.amount}{/if}
+                  </Badge>
+                {/each}
+              </div>
+            {/if}
+            {#if Object.keys(rule.config).length > 0}
+              <div class="tiny muted" style="margin-top:3px">
+                {#each Object.entries(rule.config) as [key, value] (key)}
+                  {key}: {configText(value)}{#if key !== Object.keys(rule.config).at(-1)}, {/if}
+                {/each}
+              </div>
+            {/if}
+            {#if rule.notes}<div class="tiny" style="color:var(--warning);margin-top:2px">{rule.notes}</div>{/if}
           </div>
         {/each}
       </div>

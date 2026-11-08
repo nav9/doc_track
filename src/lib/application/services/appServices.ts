@@ -112,6 +112,9 @@ export interface SharedLeaveInput {
   reason: string;
   notes: string;
   source?: SharedLeave['source'];
+  purpose?: string;
+  coveringDoctor?: string;
+  approvalNote?: string;
 }
 
 export class AppServices {
@@ -987,6 +990,7 @@ export class AppServices {
     startTime: string | null;
     endTime: string | null;
     notes: string;
+    assignedTo?: string[];
   }): Promise<void> {
     if (!input.title.trim()) throw new ServiceError('EVENT_TITLE', 'Enter an event name.');
     if (input.endDate && input.endDate < input.date) {
@@ -1008,6 +1012,7 @@ export class AppServices {
       startTime: input.startTime,
       endTime: input.endTime,
       notes: input.notes,
+      assignedTo: input.assignedTo ?? existing?.assignedTo ?? [],
       createdAt: existing?.createdAt ?? now,
       updatedAt: now
     });
@@ -1247,15 +1252,73 @@ export class AppServices {
       endDate: input.endDate,
       category,
       status: input.status,
-      source: input.source ?? 'manual',
+      source: input.source ?? existing?.source ?? 'manual',
       reason: input.reason.trim(),
       notes: input.notes.trim(),
+      purpose: input.purpose?.trim() ?? existing?.purpose ?? '',
+      coveringDoctor: input.coveringDoctor?.trim() ?? existing?.coveringDoctor ?? '',
+      approvalNote: input.approvalNote?.trim() ?? existing?.approvalNote ?? '',
       createdAt: existing?.createdAt ?? now,
       updatedAt: now
     };
     await this.repos.sharedLeaves.put(leave);
     await this.log('INFO', 'multiuser', 'Shared leave saved', `${doctor.employeeId} ${leave.startDate}`);
     return leave;
+  }
+
+  /** Ensure the signed-in doctor exists in the shared doctor list. */
+  async selfDoctor(): Promise<RosterDoctor> {
+    const snapshot = await this.snapshot();
+    const profile = snapshot.profiles[0];
+    if (!profile) throw new ServiceError('NO_PROFILE', 'Complete the profile first.');
+    const name = `${profile.prefix} ${profile.name}`.replace(/\s+/g, ' ').trim();
+    const existing = snapshot.doctors.find(
+      (doctor) =>
+        doctor.profileId === profile.id ||
+        (doctor.employeeId && doctor.employeeId.toLowerCase() === profile.employeeId.toLowerCase()) ||
+        doctor.name.toLowerCase() === name.toLowerCase()
+    );
+    if (existing) return existing;
+    return this.saveRosterDoctor({
+      name,
+      employeeId: profile.employeeId,
+      department: profile.department,
+      designation: profile.designation,
+      unit: profile.unit,
+      profileId: profile.id,
+      notes: 'Current profile'
+    });
+  }
+
+  async submitLeaveApplication(input: Omit<SharedLeaveInput, 'doctorId'> & { doctorId?: string }): Promise<SharedLeave> {
+    const doctor = input.doctorId
+      ? (await this.snapshot()).doctors.find((item) => item.id === input.doctorId)
+      : await this.selfDoctor();
+    if (!doctor) throw new ServiceError('SHARED_DOCTOR', 'Choose a doctor from the list.');
+    return this.saveSharedLeave({
+      ...input,
+      doctorId: doctor.id,
+      status: input.status || 'pending',
+      source: input.source ?? 'application'
+    });
+  }
+
+  async setSharedLeaveStatus(
+    id: string,
+    status: SharedLeave['status'],
+    approvalNote = ''
+  ): Promise<void> {
+    const snapshot = await this.snapshot();
+    const leave = snapshot.sharedLeaves.find((item) => item.id === id);
+    if (!leave) throw new ServiceError('SHARED_LEAVE_NOT_FOUND', 'Leave application not found.');
+    const now = this.clock.nowISO();
+    await this.repos.sharedLeaves.put({
+      ...leave,
+      status,
+      approvalNote: approvalNote.trim() || leave.approvalNote || '',
+      updatedAt: now
+    });
+    await this.log('INFO', 'multiuser', 'Leave application reviewed', `${leave.doctorName}: ${status}`);
   }
 
   async deleteSharedLeave(id: string): Promise<void> {
@@ -1347,7 +1410,7 @@ export class AppServices {
   private exportSnapshot(
     kind: ExportKind,
     full: DataSnapshot,
-    options: { rosterId?: string; year?: number }
+    options: { rosterId?: string; year?: number; approvedOnly?: boolean }
   ): DataSnapshot {
     const base = emptySnapshot();
     if (kind === 'full') {
@@ -1378,7 +1441,16 @@ export class AppServices {
       };
     }
     if (kind === 'multiuser') {
-      return { ...base, doctors: full.doctors, sharedLeaves: full.sharedLeaves };
+      return {
+        ...base,
+        doctors: full.doctors,
+        sharedLeaves: options.approvedOnly
+          ? full.sharedLeaves.filter((leave) => leave.status === 'approved')
+          : full.sharedLeaves
+      };
+    }
+    if (kind === 'events') {
+      return { ...base, events: full.events };
     }
     return {
       ...base,
@@ -1390,7 +1462,7 @@ export class AppServices {
 
   async exportText(
     kind: ExportKind,
-    options: { rosterId?: string; year?: number; label?: string } = {}
+    options: { rosterId?: string; year?: number; label?: string; approvedOnly?: boolean } = {}
   ): Promise<{ text: string; filename: string; count: number }> {
     const snapshot = await this.snapshot();
     const part = this.exportSnapshot(kind, snapshot, options);
@@ -1402,7 +1474,10 @@ export class AppServices {
         policy: 'Leave policy package',
         roster: 'Duty roster',
         holidays: 'Holiday list',
-        multiuser: 'Multi User doctors and shared leave'
+        multiuser: options.approvedOnly
+          ? 'Approved leave applications'
+          : 'Multi User doctors and shared leave',
+        events: 'Academic and departmental events'
       } as const)[kind];
     const text = await encodeEnvelope({
       kind,

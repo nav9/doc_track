@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { CalendarDays } from '@lucide/svelte';
   import type { HTMLInputAttributes } from 'svelte/elements';
+  import { formatDate } from '../../domain/common/dates';
 
   interface Props {
     label: string;
@@ -16,6 +18,7 @@
     rows?: number;
     id?: string;
     oninput?: HTMLInputAttributes['oninput'];
+    onchange?: HTMLInputAttributes['onchange'];
   }
 
   let {
@@ -32,7 +35,8 @@
     step,
     rows = 3,
     id,
-    oninput
+    oninput,
+    onchange
   }: Props = $props();
 </script>
 
@@ -48,6 +52,28 @@
       {rows}
       bind:value
     ></textarea>
+  {:else if type === 'date'}
+    <span class="date-input-shell">
+      <input
+        class="input-base date-input-native"
+        {id}
+        {type}
+        {placeholder}
+        {disabled}
+        {required}
+        {min}
+        {max}
+        {step}
+        {oninput}
+        {onchange}
+        autocomplete="off"
+        bind:value
+      />
+      <span class="date-input-value" class:is-empty={!value} aria-hidden="true">
+        {value ? formatDate(value) : placeholder || 'Select date'}
+      </span>
+      <CalendarDays class="date-input-icon" size={14} aria-hidden="true" />
+    </span>
   {:else}
     <input
       class="input-base"
@@ -60,6 +86,7 @@
       {max}
       {step}
       {oninput}
+      {onchange}
       autocomplete="off"
       bind:value
     />

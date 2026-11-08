@@ -6,6 +6,7 @@
   import Badge from '../lib/components/ui/Badge.svelte';
   import { APP_NAME, APP_TAGLINE, APP_VERSION } from '../lib/app/version';
   import { bytesText } from '../lib/app/ui';
+  import { formatDate } from '../lib/domain/common/dates';
 </script>
 
 <PageHeader title="About DocTrack" subtitle={APP_TAGLINE}>
@@ -45,7 +46,7 @@
         <dl class="detail-grid">
           <div><dt>Name</dt><dd>{app.activePolicy.name}</dd></div>
           <div><dt>Version</dt><dd>{app.activePolicy.version}</dd></div>
-          <div><dt>Effective from</dt><dd>{app.activePolicy.effectiveFrom}</dd></div>
+          <div><dt>Effective from</dt><dd>{formatDate(app.activePolicy.effectiveFrom, app.settings?.dateFormat)}</dd></div>
           <div><dt>Status</dt><dd>{app.activePolicy.status}</dd></div>
           <div><dt>Source</dt><dd>{app.activePolicy.source}</dd></div>
           <div><dt>Categories</dt><dd>{app.activePolicy.categories.filter((category) => category.enabled).length}</dd></div>

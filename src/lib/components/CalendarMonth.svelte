@@ -3,6 +3,7 @@
   import {
     MONTH_NAMES,
     SHORT_DAY_NAMES,
+    dayOfWeek,
     monthGrid,
     monthOf,
     todayLocal,
@@ -16,6 +17,9 @@
     weekStartsOn = 1,
     marks = {},
     selected = null,
+    solidDates = [],
+    suggestedDates = {},
+    hideHeader = false,
     onSelect,
     onPrev,
     onNext,
@@ -26,6 +30,9 @@
     weekStartsOn?: 0 | 1;
     marks?: Record<string, DayMark[]>;
     selected?: string | null;
+    solidDates?: string[];
+    suggestedDates?: Record<string, string>;
+    hideHeader?: boolean;
     onSelect?: (date: string) => void;
     onPrev?: () => void;
     onNext?: () => void;
@@ -42,6 +49,7 @@
 </script>
 
 <div class="cal">
+  {#if !hideHeader}
   <div class="cal-head">
     {#if onPrev}
       <button type="button" class="icon-btn" aria-label="Previous month" onclick={onPrev}>
@@ -58,6 +66,7 @@
       </button>
     {:else}<span class="icon-spacer"></span>{/if}
   </div>
+  {/if}
 
   <div class="cal-grid cal-dow">
     {#each dayLabels as label (label)}
@@ -80,11 +89,24 @@
         >
           <span class="cal-day">{Number(date.slice(8, 10))}</span>
           <span class="cal-marks">
+            {#if dayOfWeek(date) === 0}
+              <span class="cal-mark cal-sunday" title="Sunday — weekly holiday">S</span>
+            {/if}
             {#each (marks[date] ?? []).slice(0, 2) as mark (mark.label + mark.tone)}
-              <span class="cal-mark cat-{mark.tone}" title={mark.label}>{mark.label}</span>
+              <span
+                class="cal-mark cat-{mark.tone}"
+                class:solid={mark.kind === 'leave' && solidDates.includes(date)}
+                class:pending={mark.kind === 'leave-pending'}
+                title={mark.label}
+              >{mark.label}</span>
             {/each}
             {#if (marks[date]?.length ?? 0) > 2}
               <span class="cal-more">+{(marks[date]?.length ?? 0) - 2}</span>
+            {/if}
+            {#if suggestedDates[date]}
+              <span class="cal-mark cal-suggested" title={suggestedDates[date]}>
+                {suggestedDates[date]}
+              </span>
             {/if}
           </span>
         </button>

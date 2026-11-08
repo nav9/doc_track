@@ -2,7 +2,7 @@
   import type { Snippet } from 'svelte';
 
   interface Props {
-    variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'subtle';
+    variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'subtle' | 'success';
     size?: 'sm' | 'md';
     type?: 'button' | 'submit' | 'reset';
     disabled?: boolean;

@@ -701,7 +701,7 @@ export function evaluateLeaveRequest(
     });
   }
   if (startDate < context.today && category !== 'LOP') {
-    if (rule.retrospectiveAllowed) {
+    if (rule.retrospectiveAllowed || category === 'CCL') {
       reasons.push({
         code: 'RETROSPECTIVE_ALLOWED',
         severity: 'warning',

@@ -78,8 +78,8 @@
   --cat-pdo-fg: #116b43;
   --cat-proposed-bg: #fff7df;
   --cat-proposed-fg: #996a11;
-  --cat-nmc-bg: #e9f8f0;
-  --cat-nmc-fg: #177047;
+  --cat-nmc-bg: #ffe4c7;
+  --cat-nmc-fg: #9a4a08;
   --cat-nmc-assumed-bg: #f4e6b4;
   --cat-nmc-assumed-fg: #735600;
   --cat-event-bg: #f3eafe;
@@ -144,8 +144,8 @@
   --cat-pdo-fg: #86e6b0;
   --cat-proposed-bg: #382d14;
   --cat-proposed-fg: #f4cd7a;
-  --cat-nmc-bg: #14301f;
-  --cat-nmc-fg: #86e6b0;
+  --cat-nmc-bg: #3a2413;
+  --cat-nmc-fg: #ffb06b;
   --cat-nmc-assumed-bg: #3b3315;
   --cat-nmc-assumed-fg: #e4c874;
   --cat-event-bg: #2a1f45;
@@ -179,8 +179,8 @@
   --cat-pdo-fg: #0c5132;
   --cat-proposed-bg: #fff0b8;
   --cat-proposed-fg: #6f5000;
-  --cat-nmc-bg: #d3f5e2;
-  --cat-nmc-fg: #0d5535;
+  --cat-nmc-bg: #ffd2a8;
+  --cat-nmc-fg: #713100;
   --cat-nmc-assumed-bg: #f7e2a3;
   --cat-nmc-assumed-fg: #664a00;
   --cat-event-bg: #e8d9ff;
@@ -1219,6 +1219,28 @@ h3 {
   gap: 7px;
 }
 
+.rule-consequence {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--panel-2);
+}
+
+.rule-consequence-heading {
+  margin: 0 0 2px;
+  color: var(--primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.rule-consequence-title {
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
 .row {
   display: flex;
   align-items: center;
@@ -1568,6 +1590,38 @@ h3 {
   background: var(--panel-2);
 }
 
+.leave-holiday-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.leave-holiday-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 0;
+}
+
+.leave-holiday-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.leave-holiday-row strong {
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+.leave-holiday-row .tiny {
+  line-height: 1.35;
+}
+
 .banner {
   display: flex;
   align-items: flex-start;
@@ -1749,6 +1803,7 @@ h3 {
 .cal-marks {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 2px;
   min-width: 0;
   overflow: hidden;
@@ -1767,12 +1822,13 @@ h3 {
   text-overflow: ellipsis;
 }
 
+.cal-mark.cat-nmc,
 .cal-mark.cat-nmc-assumed {
-  height: auto;
-  padding-inline: 2px;
-  font-size: 7.5px;
-  letter-spacing: -0.01em;
-  line-height: 1.45;
+  border: 1px solid transparent;
+  padding: 0 3px;
+  font-size: 8.5px;
+  letter-spacing: normal;
+  line-height: 1.4;
 }
 
 .cal-more {
@@ -2497,6 +2553,10 @@ h3 {
   .leave-usage-name .small {
     display: none;
   }
+
+  .leave-holiday-summary {
+    grid-template-columns: 1fr;
+  }
 }
 
 .roster-label {
@@ -2671,6 +2731,7 @@ h3 {
   }
 
   .cal-mark {
+    align-self: stretch;
     height: 4px;
     padding: 0;
     border-radius: 2px;
@@ -2690,3 +2751,299 @@ h3 {
   }
 }
 
+
+/* Deep-red demo disclaimer on onboarding */
+.demo-disclaimer {
+  background: #7a0b12;
+  color: #ffe45c;
+  border: 1px solid #a5161f;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: inset 0 0 0 1px rgba(255, 228, 92, 0.15);
+}
+
+.demo-disclaimer h2 {
+  margin: 0 0 8px;
+  color: #fff3a3;
+  font-size: 1rem;
+}
+
+.demo-disclaimer p {
+  margin: 0 0 10px;
+  color: #ffe45c;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.demo-disclaimer-strong {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.btn-success {
+  background: var(--success);
+  color: #fff;
+  border-color: var(--success);
+}
+
+.btn-success:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--success) 82%, #000);
+  border-color: color-mix(in srgb, var(--success) 82%, #000);
+}
+
+/* Roster: left-aligned headings and no per-day delete column */
+.duty-row {
+  grid-template-columns: 26px 110px 90px 72px minmax(180px, 1fr);
+}
+
+.duty-head > span {
+  text-align: left;
+}
+
+/* Year planner */
+.planner-floating-balances {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin-bottom: 12px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--panel) 96%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 0.08);
+  backdrop-filter: blur(8px);
+}
+
+.planner-floating-title,
+.planner-year-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.planner-floating-title > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.planner-balance-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 20px;
+}
+
+.planner-balance-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0;
+  font-size: 12.5px;
+}
+
+.planner-balance-code {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.balance-available {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.balance-used {
+  color: var(--muted);
+}
+
+.balance-pending {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.planner-year-scroll {
+  max-height: 74vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 5px;
+  border-radius: 12px;
+}
+
+.planner-year-month {
+  margin-bottom: 12px;
+}
+
+.planner-year-month .cal-cell {
+  min-height: 66px;
+}
+
+.cal-mark.solid {
+  border: 1px solid var(--success);
+}
+
+.cal-mark.pending {
+  border: 1px dotted var(--danger);
+}
+
+.cal-suggested {
+  border: 1px dotted var(--warning);
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.application-reminder {
+  margin-bottom: 12px;
+}
+
+.application-row {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--muted);
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: var(--panel);
+}
+
+.application-row-pending,
+.application-row-planned {
+  border-left-color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.application-row-approved {
+  border-left-color: var(--success);
+  background: var(--success-soft);
+}
+
+.application-row-rejected,
+.application-row-cancelled {
+  border-left-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.application-pending-note {
+  margin-top: 4px;
+  color: var(--warning);
+  font-weight: 800;
+}
+
+.application-details {
+  display: grid;
+  gap: 2px;
+  margin: 6px 0;
+  font-size: 12px;
+}
+
+.application-import-card {
+  margin-top: 12px;
+}
+
+.assignment-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 170px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+
+.assignment-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.leave-punch-warning {
+  border-color: color-mix(in srgb, var(--warning) 45%, transparent);
+}
+
+@media (max-width: 720px) {
+  .duty-row {
+    grid-template-columns: 24px minmax(90px, 1fr) 80px 60px minmax(120px, 1.3fr);
+  }
+
+  .planner-balance-list {
+    gap: 4px 14px;
+  }
+}
+
+/* Sunday is a recurring weekly holiday; show it as a yellow leave chip. */
+.cal-mark.cal-sunday {
+  background: #e8d99a;
+  color: #6a4e00;
+  border: 1px solid #c8ae5c;
+  font-weight: 800;
+}
+
+[data-theme='dark'] .cal-mark.cal-sunday {
+  background: #5b5230;
+  color: #e4d7a6;
+  border-color: #74683c;
+}
+
+/* Date inputs keep the native picker but display a readable 12 Nov 2026 value. */
+.date-input-shell {
+  position: relative;
+  display: block;
+}
+
+.date-input-native,
+.date-input-native:focus {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: transparent;
+  padding-right: 32px;
+}
+
+.date-input-native::-webkit-datetime-edit {
+  color: transparent;
+}
+
+.date-input-native::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.date-input-value {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  right: 32px;
+  transform: translateY(-50%);
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.date-input-value.is-empty {
+  color: var(--muted);
+}
+
+.date-input-icon {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  color: var(--muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}

@@ -12,13 +12,14 @@ export interface DataVersion {
   snapshot: DataSnapshot;
 }
 
-export type ExportKind = 'full' | 'leave' | 'policy' | 'roster' | 'holidays' | 'multiuser';
+export type ExportKind = 'full' | 'leave' | 'policy' | 'roster' | 'holidays' | 'multiuser' | 'events';
 
 export interface ExportOptions {
   kind: ExportKind;
   rosterId?: string;
   year?: number;
   label?: string;
+  approvedOnly?: boolean;
 }
 
 export interface ImportSummaryLine {

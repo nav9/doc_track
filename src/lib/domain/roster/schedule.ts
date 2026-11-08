@@ -73,10 +73,12 @@ export function suggestedUnitForDate(date: ISODate, unitCount: number): number {
     return odd.length ? odd[week % odd.length] : 1;
   }
   if (weekday === 6) {
+    // Saturdays alternate 4, 2, 4, 2… as specified for a four-unit roster.
     const even = Array.from({ length: count }, (_, index) => index + 1).filter(
       (unit) => unit % 2 === 0
     );
-    return even.length ? even[week % even.length] : count;
+    const ordered = even.length > 1 ? [even[even.length - 1], ...even.slice(0, -1)] : even;
+    return ordered.length ? ordered[week % ordered.length] : count;
   }
   return (week % count) + 1;
 }

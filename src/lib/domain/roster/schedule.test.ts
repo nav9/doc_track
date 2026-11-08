@@ -56,8 +56,8 @@ describe('roster schedule', () => {
     expect(suggestedUnitForDate('2026-11-05', 4)).toBe(4);
     expect(suggestedUnitForDate('2026-11-06', 4)).toBe(1);
     expect(suggestedUnitForDate('2026-11-13', 4)).toBe(3);
-    expect(suggestedUnitForDate('2026-11-14', 4)).toBe(4);
-    expect(suggestedUnitForDate('2026-11-21', 4)).toBe(2);
+    expect(suggestedUnitForDate('2026-11-14', 4)).toBe(2);
+    expect(suggestedUnitForDate('2026-11-21', 4)).toBe(4);
     expect(suggestedUnitForDate('2026-11-01', 4)).toBe(1);
     expect(suggestedUnitForDate('2026-11-08', 4)).toBe(2);
   });

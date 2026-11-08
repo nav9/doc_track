@@ -97,14 +97,6 @@
     { code: 'SPCL', label: 'SpCL' }
   ] as const;
 
-  type LeaveMetricKey = 'available' | 'used' | 'pending';
-
-  const leaveMetricRows: { key: LeaveMetricKey; label: string; hint: string }[] = [
-    { key: 'available', label: 'Available', hint: 'remaining' },
-    { key: 'used', label: 'Used', hint: 'approved' },
-    { key: 'pending', label: 'Awaiting approval', hint: 'pending' }
-  ];
-
   const leaveSummaries = $derived.by(() =>
     leaveTypes.map(({ code, label }) => {
       const balance = app.balances[code];
@@ -129,6 +121,20 @@
       return balance ? [balance] : [];
     })
   );
+
+  const holidayAvailability = $derived.by(() => {
+    const year = today.slice(0, 4);
+    const yearEnd = `${year}-12-31`;
+    const remaining = app.snapshot.holidays.filter(
+      (holiday) => holiday.date >= today && holiday.date <= yearEnd
+    );
+    return {
+      year,
+      gh: remaining.filter((holiday) => holiday.kind === 'GH').length,
+      rh: remaining.filter((holiday) => holiday.kind === 'RH').length,
+      rhQuota: Math.max(0, app.balances.RH?.available ?? 0)
+    };
+  });
 
   function leaveNumber(value: number): string {
     return String(Math.round(value * 100) / 100);
@@ -272,8 +278,8 @@
     todayLeave ? ` · on ${todayLeave.category} leave today` : ''
   }`}
 >
-  <Button variant="secondary" onclick={() => navigate('/planner')}>
-    <CalendarPlus size={14} /> Plan leave
+  <Button variant="success" onclick={() => navigate('/planner')}>
+    <CalendarPlus size={14} /> Apply/Plan leave
   </Button>
   <Button onclick={() => navigate('/roster')}>Open duty roster</Button>
   <Button variant="secondary" onclick={() => navigate('/multi-user')}>Multi User</Button>
@@ -320,48 +326,11 @@
   </div>
 {/if}
 
-<section class="leave-metrics" aria-labelledby="leave-balance-title">
-  <div class="leave-metrics-head">
-    <div>
-      <h2 id="leave-balance-title">Leave balance</h2>
-      <span class="tiny muted">Current entitlement period</span>
-    </div>
-    <button type="button" class="link-button tiny" onclick={() => navigate('/planner')}>Plan leave</button>
-  </div>
-
-  {#each leaveMetricRows as row (row.key)}
-    <div class="leave-metric-row">
-      <div class="leave-metric-row-label">
-        <strong>{row.label}</strong>
-        <span class="tiny muted">{row.hint}</span>
-      </div>
-      <div class="leave-metric-cards">
-        {#each leaveSummaries as leave (leave.code)}
-          <button
-            type="button"
-            class="leave-metric-card"
-            class:is-empty={row.key !== 'available' && leave[row.key] === 0}
-            aria-label={`${leave.label} ${row.label.toLowerCase()}: ${daysText(leave[row.key])}`}
-            title={`${leave.periodLabel} · ${row.label.toLowerCase()}: ${daysText(leave[row.key])}`}
-            onclick={() => navigate('/planner')}
-          >
-            <span class={categoryChipClass(leave.code)}>{leave.label}</span>
-            <span class="leave-metric-reading">
-              <strong>{leaveNumber(leave[row.key])}</strong>
-              <span>days</span>
-            </span>
-          </button>
-        {/each}
-      </div>
-    </div>
-  {/each}
-</section>
-
 <Card className="leave-usage-card">
   <div class="section-card-head">
     <div>
       <h2>Leave used and remaining</h2>
-      <span class="tiny muted">Approved usage and approvals still waiting</span>
+      <span class="tiny muted">Approved usage, pending approvals and upcoming holidays</span>
     </div>
     <button type="button" class="link-button tiny" onclick={() => navigate('/leave-rules')}>View rules</button>
   </div>
@@ -414,6 +383,29 @@
     <span><i class="leave-key-used"></i>Used</span>
     <span><i class="leave-key-pending"></i>Awaiting approval</span>
     <span><i class="leave-key-available"></i>Remaining</span>
+  </div>
+
+  <div class="leave-holiday-summary">
+    <div class="leave-holiday-row">
+      <span class="chip cat-gh">GH</span>
+      <div>
+        <strong>
+          {holidayAvailability.gh} general holiday{holidayAvailability.gh === 1 ? '' : 's'} available
+        </strong>
+        <span class="tiny muted">Remaining until 31 Dec {holidayAvailability.year}</span>
+      </div>
+    </div>
+    <div class="leave-holiday-row">
+      <span class="chip cat-rh">RH</span>
+      <div>
+        <strong>
+          {holidayAvailability.rh} valid RH date{holidayAvailability.rh === 1 ? '' : 's'} available
+        </strong>
+        <span class="tiny muted">
+          Remaining until 31 Dec {holidayAvailability.year} · {leaveNumber(holidayAvailability.rhQuota)} RH entitlement available
+        </span>
+      </div>
+    </div>
   </div>
 </Card>
 

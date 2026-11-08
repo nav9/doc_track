@@ -39,7 +39,13 @@ export interface ProfileDraft {
 }
 
 /** Fields the specification makes compulsory. */
-export const COMPULSORY_PROFILE_FIELDS = ['prefix', 'name', 'employeeId', 'department'] as const;
+export const COMPULSORY_PROFILE_FIELDS = [
+  'prefix',
+  'name',
+  'employeeId',
+  'department',
+  'designation'
+] as const;
 
 export function emptyProfileDraft(): ProfileDraft {
   return {
@@ -107,6 +113,14 @@ export function validateProfileDraft(
       severity: 'error',
       field: 'department',
       message: 'Enter the department.'
+    });
+  }
+  if (!draft.designation?.trim()) {
+    issues.push({
+      code: 'PROFILE_DESIGNATION_REQUIRED',
+      severity: 'error',
+      field: 'designation',
+      message: 'Enter the designation.'
     });
   }
   if (draft.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(draft.contactEmail.trim())) {

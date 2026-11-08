@@ -72,14 +72,14 @@ describe('NMC monthly attendance', () => {
     expect(report.total).toBe(26);
   });
 
-  it('excludes general holidays but not restricted holidays', () => {
+  it('excludes both general and restricted holidays from assumed punches', () => {
     const report = computeMonthAttendance({
       ...base,
       holidays: [makeHoliday('2026-11-09', 'GH'), makeHoliday('2026-11-10', 'RH')]
     });
-    expect(report.excludedHolidays).toBe(1);
+    expect(report.excludedHolidays).toBe(2);
     expect(report.days.find((day) => day.date === '2026-11-09')?.status).toBe('holiday');
-    expect(report.days.find((day) => day.date === '2026-11-10')?.status).toBe('assumed');
+    expect(report.days.find((day) => day.date === '2026-11-10')?.status).toBe('holiday');
   });
 
   it('does not assume punches for future dates', () => {

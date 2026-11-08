@@ -25,6 +25,8 @@ export interface CalendarEvent extends AuditFields {
   startTime: string | null;
   endTime: string | null;
   notes: string;
+  /** Doctors this HR event is assigned to, by employee ID or name. */
+  assignedTo?: string[];
 }
 
 export interface EventName extends AuditFields {

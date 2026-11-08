@@ -1,7 +1,7 @@
 import type { AuditFields, ISODate } from '../common/types';
 import type { LeaveStatus } from '../leave/types';
 
-export type SharedLeaveSource = 'whatsapp' | 'manual' | 'import';
+export type SharedLeaveSource = 'whatsapp' | 'manual' | 'import' | 'application';
 
 /**
  * Leave shared by another doctor. It is deliberately separate from the
@@ -21,6 +21,10 @@ export interface SharedLeave extends AuditFields {
   source: SharedLeaveSource;
   reason: string;
   notes: string;
+  /** Doctor-submitted application details. */
+  purpose?: string;
+  coveringDoctor?: string;
+  approvalNote?: string;
 }
 
 export function sharedLeaveCoversDate(

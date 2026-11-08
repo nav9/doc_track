@@ -335,7 +335,8 @@
             { value: 'policy', label: 'Policy package' },
             { value: 'holidays', label: 'Holiday list' },
             { value: 'roster', label: 'Duty rosters' },
-            { value: 'multiuser', label: 'Multi User doctors and shared leave' }
+            { value: 'multiuser', label: 'Multi User doctors and shared leave' },
+            { value: 'events', label: 'Academic and departmental events' }
           ]}
         />
         <div class="row" style="margin-top:6px">
@@ -377,17 +378,22 @@
         />
         <label class="field">
           <span class="field-label">Simulated now</span>
-          <input
-            class="input-base"
-            type="datetime-local"
-            value={draft.manualNow ? draft.manualNow.slice(0, 16) : ''}
-            oninput={(event) => {
-              if (!draft) return;
-              draft.manualNow = event.currentTarget.value
-                ? new Date(event.currentTarget.value).toISOString()
-                : null;
-            }}
-          />
+          <span class="date-input-shell">
+            <input
+              class="input-base date-input-native"
+              type="datetime-local"
+              value={draft.manualNow ? draft.manualNow.slice(0, 16) : ''}
+              oninput={(event) => {
+                if (!draft) return;
+                draft.manualNow = event.currentTarget.value
+                  ? new Date(event.currentTarget.value).toISOString()
+                  : null;
+              }}
+            />
+            <span class="date-input-value" class:is-empty={!draft.manualNow} aria-hidden="true">
+              {draft.manualNow ? formatDateTime(draft.manualNow) : 'Select date and time'}
+            </span>
+          </span>
         </label>
         {#if app.storage}
           <p class="tiny muted" style="margin:6px 0 0">

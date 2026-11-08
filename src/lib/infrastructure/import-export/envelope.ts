@@ -144,7 +144,7 @@ async function decodeChunk(chunk: string): Promise<Envelope> {
   }
   if (
     !header.kind ||
-    !['full', 'leave', 'policy', 'roster', 'holidays', 'multiuser'].includes(header.kind)
+    !['full', 'leave', 'policy', 'roster', 'holidays', 'multiuser', 'events'].includes(header.kind)
   ) {
     throw new Error('The data block does not declare a supported data kind.');
   }
@@ -401,6 +401,9 @@ export function normalizeSnapshotData(
         source: 'import' as const,
         reason: str(record.reason),
         notes: str(record.notes),
+        purpose: str(record.purpose),
+        coveringDoctor: str(record.coveringDoctor),
+        approvalNote: str(record.approvalNote),
         createdAt: str(record.createdAt, new Date().toISOString()),
         updatedAt: str(record.updatedAt, new Date().toISOString())
       };
@@ -638,7 +641,7 @@ export function normalizeSnapshotData(
     });
   }
 
-  if (kind === 'full') {
+  if (kind === 'full' || kind === 'events') {
     take('events', (record) => {
       const id = recordId(record, 'event');
       if (!id || !isISODate(str(record.date))) return null;
@@ -660,10 +663,15 @@ export function normalizeSnapshotData(
         startTime: str(record.startTime) || null,
         endTime: str(record.endTime) || null,
         notes: str(record.notes),
+        assignedTo: Array.isArray(record.assignedTo)
+          ? record.assignedTo.filter((item): item is string => typeof item === 'string')
+          : [],
         createdAt: str(record.createdAt, new Date().toISOString()),
         updatedAt: str(record.updatedAt, new Date().toISOString())
       };
     });
+
+    if (kind === 'events') return { snapshot, invalid, conflicts };
 
     const settingsRecord = asArray(data.settings)[0];
     if (settingsRecord && typeof settingsRecord === 'object') {

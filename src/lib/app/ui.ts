@@ -6,6 +6,7 @@ import type { DateFormat } from '../domain/common/dates';
 export interface DayMark {
   label: string;
   tone: string;
+  kind?: 'leave' | 'leave-pending';
 }
 
 const CATEGORY_TONES: Record<string, string> = {
@@ -59,11 +60,12 @@ export function addMark(
   marks: Record<string, DayMark[]>,
   date: string,
   label: string,
-  tone: string
+  tone: string,
+  kind?: DayMark['kind']
 ): void {
   const list = marks[date] ?? [];
   if (list.some((mark) => mark.label === label && mark.tone === tone)) return;
-  list.push({ label, tone });
+  list.push({ label, tone, kind });
   marks[date] = list;
 }
 

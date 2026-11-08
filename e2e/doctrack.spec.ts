@@ -6,6 +6,7 @@ async function onboard(page: Page) {
   await page.getByLabel(/Full name/).fill('Asha Rao');
   await page.getByLabel(/Employee ID/).fill('MC-101');
   await page.getByLabel(/Department/).fill('General Medicine');
+  await page.getByLabel(/Designation/).fill('Senior Resident');
   await page.getByLabel(/Medical college \/ hospital/).fill('Medical College Hospital');
   await page.getByLabel(/Joining date/).fill('2020-01-01');
   await page.getByRole('button', { name: 'Create profile' }).click();
@@ -128,7 +129,7 @@ test('attendance calendar toggles NMC punches without a dialog', async ({ page }
   }
 
   const cell = page.getByRole('button', { name: target, exact: true });
-  const assumedChip = cell.getByText('NMC punch', { exact: true });
+  const assumedChip = cell.getByText('NMC', { exact: true });
   await expect(assumedChip).toBeVisible();
   const cellBox = await cell.boundingBox();
   const chipBox = await assumedChip.boundingBox();
@@ -218,7 +219,6 @@ test('roster PDF downloads as a real PDF', async ({ page }) => {
   await doctorDialog.getByRole('button', { name: 'Close' }).click();
   await expect(doctorDialog).toBeHidden();
 
-  await page.getByRole('button', { name: 'Fill all days' }).first().click();
   await page.getByRole('button', { name: 'Auto assign doctors' }).click();
   await page.getByRole('button', { name: 'Save roster' }).click();
   await expect(page.getByRole('button', { name: 'PDF preview' })).toBeEnabled();
@@ -279,7 +279,6 @@ test('previous month action appears only when an earlier roster is saved', async
     await yearInput.press('Tab');
   }
   await monthSelect.selectOption(String(previousMonth));
-  await page.getByRole('button', { name: 'Fill all days' }).first().click();
   await page.getByRole('button', { name: 'Auto assign doctors' }).click();
   await page.getByRole('button', { name: 'Save roster' }).click();
   await expect(page.getByRole('button', { name: 'PDF preview' })).toBeEnabled();

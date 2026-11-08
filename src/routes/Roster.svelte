@@ -395,25 +395,6 @@
     return match ? match.id || match.name : entry.doctorName;
   }
 
-  function fillMonth() {
-    if (!draft) return;
-    const used = new Set(draft.entries.map((entry) => entry.date));
-    const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
-    const added: RosterEntry[] = [];
-    for (let day = 1; day <= last; day += 1) {
-      const date = `${monthPrefix}-${pad2(day)}`;
-      if (!used.has(date)) added.push(blankEntry(date));
-    }
-    draft.entries = [...draft.entries, ...added].sort((a, b) => a.date.localeCompare(b.date));
-    app.notify('info', `${added.length} day${added.length === 1 ? '' : 's'} added. Units follow the week rotation.`);
-  }
-
-  function removeEntry(id: string) {
-    if (!draft) return;
-    draft.entries = draft.entries.filter((entry) => entry.id !== id);
-    selectedIds = selectedIds.filter((selected) => selected !== id);
-  }
-
   function selectDoctor(entry: RosterEntry, value: string) {
     const doctor = departmentDoctors.find((item) => (item.id || item.name) === value);
     if (!doctor) {
@@ -530,8 +511,19 @@
       : selectedIds.filter((selected) => selected !== id);
   }
 
+  const canSwap = $derived.by(() => {
+    if (!draft || selectedIds.length !== 2) return false;
+    const first = draft.entries.find((entry) => entry.id === selectedIds[0]);
+    const second = draft.entries.find((entry) => entry.id === selectedIds[1]);
+    if (!first?.doctorName.trim() || !second?.doctorName.trim()) return false;
+    return (
+      (first.doctorId || first.doctorName).toLowerCase() !==
+      (second.doctorId || second.doctorName).toLowerCase()
+    );
+  });
+
   function swapSelected() {
-    if (!draft || selectedIds.length !== 2) return;
+    if (!draft || !canSwap) return;
     const first = draft.entries.find((entry) => entry.id === selectedIds[0]);
     const second = draft.entries.find((entry) => entry.id === selectedIds[1]);
     if (!first || !second) return;
@@ -549,8 +541,9 @@
     second.doctorName = swap.doctorName;
     second.employeeId = swap.employeeId;
     second.department = swap.department;
-    first.swapNote = `Swapped with ${second.date}`;
-    second.swapNote = `Swapped with ${first.date}`;
+    const dateFormat = draft.dateFormat ?? app.settings?.rosterDateFormat;
+    first.swapNote = `Swapped with ${formatDate(second.date, dateFormat)}`;
+    second.swapNote = `Swapped with ${formatDate(first.date, dateFormat)}`;
     selectedIds = [];
     app.notify('success', 'The two selected doctors were swapped.');
   }
@@ -720,14 +713,13 @@
         {#if previousRoster}
           <Button size="sm" variant="secondary" onclick={copyPreviousMonth}>Use previous month</Button>
         {/if}
-        <Button size="sm" variant="secondary" onclick={fillMonth}>Fill all days</Button>
         <Button size="sm" variant="subtle" onclick={autoAssign} disabled={!draft || draft.entries.length === 0}>
           <Sparkles size={13} /> Auto assign doctors
         </Button>
         <Button size="sm" variant="subtle" onclick={() => (doctorListOpen = true)}>
           Doctor names list
         </Button>
-        <Button size="sm" variant="subtle" onclick={swapSelected} disabled={selectedIds.length !== 2}>
+        <Button size="sm" variant="subtle" onclick={swapSelected} disabled={!canSwap}>
           Swap selected doctors
         </Button>
         <Button size="sm" variant="subtle" onclick={() => (pdfOpen = true)} disabled={!draft || draft.entries.length === 0 || errorCount > 0}>
@@ -889,8 +881,7 @@
       {#if draft.entries.length === 0}
         <div class="empty">
           <strong>No days entered</strong>
-          <span class="tiny muted">Fill the month, then let auto-assignment propose doctors or choose them row by row.</span>
-          <div class="row"><Button size="sm" onclick={fillMonth}>Fill all days</Button></div>
+          <span class="tiny muted">Use “Add a day”, then let auto-assignment propose doctors or choose them row by row.</span>
         </div>
       {:else}
         <div class="duty-table">
@@ -900,7 +891,6 @@
             <span>Days</span>
             <span>Unit</span>
             <span>Doctor's name</span>
-            <span></span>
           </div>
           {#each sortedEntries as entry (entry.id)}
             {@const issue = issueFor(entry.id)}
@@ -939,14 +929,6 @@
                     <option value={doctor.id || doctor.name}>{doctor.name}</option>
                   {/each}
                 </select>
-                <button
-                  type="button"
-                  class="icon-btn"
-                  aria-label={`Remove ${formatDate(entry.date)}`}
-                  onclick={() => removeEntry(entry.id)}
-                >
-                  <Trash2 size={14} />
-                </button>
               </div>
               {#if issue}
                 <div class:error-text={issue.level === 'error'} class:warning-text={issue.level === 'warning'}>
@@ -1035,7 +1017,7 @@
         </select>
       </label>
     </div>
-    <Toggle bind:checked={pdfOptions.showSignatureBlock} label="Leave signature and stamp space" />
+    <Toggle bind:checked={pdfOptions.showSignatureBlock} label="Leave signature space" />
 
     {#if pdfData}
       <div class="roster-document-head roster-preview-head">

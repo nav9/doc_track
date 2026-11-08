@@ -82,6 +82,8 @@ describe('roster PDF', () => {
     expect(blob.size).toBeGreaterThan(1000);
 
     const bytes = new Uint8Array(await blob.arrayBuffer());
-    expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe('%PDF-');
+    const text = new TextDecoder('latin1').decode(bytes);
+    expect(text.slice(0, 5)).toBe('%PDF-');
+    expect(text.match(/\/Type\s*\/Page\b/g) ?? []).toHaveLength(1);
   });
 });

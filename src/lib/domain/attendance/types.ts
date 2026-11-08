@@ -47,6 +47,8 @@ export interface MonthAttendance {
   leaveDays: number;
   days: AttendanceDay[];
   projectionNote: string;
+  nmcSuspended: boolean;
+  nmcSuspensionReason: string;
 }
 
 export function attendanceStatusLabel(status: AttendanceDayStatus): string {

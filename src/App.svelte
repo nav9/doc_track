@@ -30,6 +30,9 @@
   import MultiUser from './routes/MultiUser.svelte';
   import LeaveRules from './routes/LeaveRules.svelte';
   import Attendance from './routes/Attendance.svelte';
+  import Approvals from './routes/Approvals.svelte';
+  import Holidays from './routes/Holidays.svelte';
+  import Events from './routes/Events.svelte';
   import Account from './routes/Account.svelte';
   import SettingsView from './routes/Settings.svelte';
   import Versions from './routes/Versions.svelte';
@@ -43,12 +46,15 @@
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/planner', label: 'Planner', icon: CalendarDays },
     { path: '/roster', label: 'Duty roster', icon: ClipboardList },
+    { path: '/approvals', label: 'Leave approvals', icon: ClipboardList },
     { path: '/multi-user', label: 'Multi User', icon: Users },
     { path: '/leave-rules', label: 'Leave rules', icon: BookOpenText },
-    { path: '/attendance', label: 'Attendance', icon: CalendarCheck }
+    { path: '/attendance', label: 'NMC', icon: CalendarCheck }
   ];
 
   const secondaryNav = [
+    { path: '/holidays', label: 'Holiday calendar', icon: CalendarDays },
+    { path: '/events', label: 'Academic events', icon: CalendarCheck },
     { path: '/account', label: 'Account', icon: UserRound },
     { path: '/versions', label: 'Version history', icon: History },
     { path: '/logs', label: 'Activity logs', icon: Clock },
@@ -231,6 +237,12 @@
         <LeaveRules />
       {:else if path === '/attendance'}
         <Attendance />
+      {:else if path === '/approvals'}
+        <Approvals />
+      {:else if path === '/holidays'}
+        <Holidays />
+      {:else if path === '/events'}
+        <Events />
       {:else if path === '/account'}
         <Account />
       {:else if path === '/settings'}

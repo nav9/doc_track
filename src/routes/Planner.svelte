@@ -12,6 +12,7 @@
   import Toggle from '../lib/components/ui/Toggle.svelte';
   import DateRangePicker from '../lib/components/ui/DateRangePicker.svelte';
   import ProposalCalendar from '../lib/components/ProposalCalendar.svelte';
+  import PlannerYear from './PlannerYear.svelte';
   import {
     evaluateLeaveRequest,
     type LeaveEvaluation,
@@ -36,7 +37,7 @@
     statusTone
   } from '../lib/app/ui';
 
-  let tab = $state<'quick' | 'search' | 'leave' | 'duty'>('quick');
+  let tab = $state<'year' | 'quick' | 'search' | 'leave' | 'duty'>('quick');
   let context = $state<LeaveValidationContext | null>(null);
   let contextError = $state('');
 
@@ -476,6 +477,16 @@
   <button
     type="button"
     class="tab"
+    class:active={tab === 'year'}
+    role="tab"
+    aria-selected={tab === 'year'}
+    onclick={() => (tab = 'year')}
+  >
+    Year view
+  </button>
+  <button
+    type="button"
+    class="tab"
     class:active={tab === 'quick'}
     role="tab"
     aria-selected={tab === 'quick'}
@@ -531,7 +542,9 @@
   </div>
 {/if}
 
-{#if tab === 'quick'}
+{#if tab === 'year'}
+  <PlannerYear />
+{:else if tab === 'quick'}
   <div class="stack">
     <Card>
       <div class="section-card-head">

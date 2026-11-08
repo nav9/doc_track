@@ -133,7 +133,7 @@
   <Card>
     <div class="section-card-head">
       <h2>Profile</h2>
-      <span class="tiny muted">Compulsory: prefix, name, employee ID, department</span>
+      <span class="tiny muted">Compulsory: prefix, name, employee ID, department, designation</span>
     </div>
     {#if error}<div class="banner banner-danger" style="margin-bottom:8px">{error}</div>{/if}
 
@@ -145,9 +145,9 @@
       <Field label="Full name" bind:value={draft.name} required />
       <Field label="Employee ID" bind:value={draft.employeeId} required />
       <Field label="Department" bind:value={draft.department} required />
-      <Field label="Designation" bind:value={draft.designation} />
+      <Field label="Designation" bind:value={draft.designation} required />
       <Field label="Speciality" bind:value={draft.speciality} />
-      <Field label="Unit / ward" bind:value={draft.unit} />
+      <Field label="Unit number" bind:value={draft.unit} />
       <Field label="Medical college / hospital" bind:value={draft.hospitalName} />
       <Select label="Role" bind:value={draft.role} options={roleOptions} />
       <Field label="Joining date" type="date" bind:value={joiningDate} />

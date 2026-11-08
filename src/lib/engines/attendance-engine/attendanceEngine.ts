@@ -60,6 +60,15 @@ export function computeMonthAttendance(context: AttendanceContext): MonthAttenda
   const lookup = buildHolidayLookup(context.holidays, context.weekendDays);
   const total = daysInMonth(context.year, context.month);
   const recordsByDate = new Map(context.records.map((record) => [record.date, record]));
+  const monthKey = monthKeyOf(context.year, context.month);
+  const maternity = context.leaves.find(
+    (leave) =>
+      isActiveLeave(leave) &&
+      leave.category === 'ML' &&
+      leave.startDate.slice(0, 7) <= monthKey &&
+      leave.endDate.slice(0, 7) >= monthKey
+  );
+  const required = maternity ? 0 : context.required;
 
   const days: AttendanceDay[] = [];
   const confirmedDays: ISODate[] = [];
@@ -85,7 +94,15 @@ export function computeMonthAttendance(context: AttendanceContext): MonthAttenda
       confirmed += 1;
       projectedTotal += 1;
       confirmedDays.push(date);
-      days.push({ date, status: 'confirmed', counts: 1, note: record.note, leaveCategory: null });
+      days.push({
+        date,
+        status: 'confirmed',
+        counts: 1,
+        note: leave
+          ? `${record.note || 'NMC punch recorded'} — this date is also on ${leave.category} leave; remove the punch if it is incorrect.`
+          : record.note,
+        leaveCategory: leave?.category ?? null
+      });
       continue;
     }
 
@@ -119,7 +136,7 @@ export function computeMonthAttendance(context: AttendanceContext): MonthAttenda
       continue;
     }
 
-    if (gh || (rh && weekend)) {
+    if (gh || rh) {
       excludedHolidays += 1;
       days.push({
         date,
@@ -158,31 +175,36 @@ export function computeMonthAttendance(context: AttendanceContext): MonthAttenda
   }
 
   const counted = confirmed + assumed;
-  const missing = Math.max(0, context.required - counted);
-  const projectionNote =
-    missing > 0
-      ? `Add ${missing} punch${missing === 1 ? '' : 'es'} to reach the monthly requirement of ${context.required}.`
-      : `The monthly requirement of ${context.required} punches is met.`;
+  const missing = Math.max(0, required - counted);
+  const projectionNote = maternity
+    ? 'NMC punching is suspended for the duration of maternity leave.'
+    : missing > 0
+      ? `Add ${missing} punch${missing === 1 ? '' : 'es'} to reach the monthly requirement of ${required}.`
+      : `The monthly requirement of ${required} punches is met.`;
 
   return {
     year: context.year,
     month: context.month,
-    required: context.required,
+    required,
     confirmed,
     assumed,
     total: counted,
     missing,
-    shortage: counted < context.required,
+    shortage: counted < required,
     excludedSundays,
     excludedHolidays,
     leaveDays,
     days,
     projectionNote,
     projectedTotal,
-    projectedShortage: projectedTotal < context.required,
+    projectedShortage: projectedTotal < required,
     confirmedDays,
     assumedDays,
-    absentDays
+    absentDays,
+    nmcSuspended: Boolean(maternity),
+    nmcSuspensionReason: maternity
+      ? `NMC is suspended from ${maternity.startDate} to ${maternity.endDate} for maternity leave.`
+      : ''
   };
 }
 

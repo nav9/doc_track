@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Download, Plus, Trash2, Upload } from '@lucide/svelte';
+  import { ClipboardPaste, Download, Plus, Trash2, Upload } from '@lucide/svelte';
   import { app } from '../lib/app/state.svelte';
   import PageHeader from '../lib/components/ui/PageHeader.svelte';
   import Card from '../lib/components/ui/Card.svelte';
@@ -7,7 +7,12 @@
   import Field from '../lib/components/ui/Field.svelte';
   import Select from '../lib/components/ui/Select.svelte';
   import Badge from '../lib/components/ui/Badge.svelte';
-  import { downloadText, pickTextFile } from '../lib/infrastructure/files/files';
+  import Dialog from '../lib/components/ui/Dialog.svelte';
+  import {
+    downloadText,
+    pickTextFile,
+    readClipboard
+  } from '../lib/infrastructure/files/files';
   import { formatDate } from '../lib/domain/common/dates';
   import type { ImportPreview } from '../lib/application/dto/version';
   import { messageOf } from '../lib/application/services/errors';
@@ -29,6 +34,7 @@
   let type = $state<CalendarEvent['type']>('academic');
   let notes = $state('');
   let assignedTo = $state<string[]>([]);
+  let importOpen = $state(false);
   let importText = $state('');
   let preview = $state<ImportPreview | null>(null);
   let importBusy = $state(false);
@@ -47,6 +53,16 @@
       .slice()
       .sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title))
   );
+  const importedEvents = $derived(
+    preview?.snapshot.events
+      .slice()
+      .sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title)) ?? []
+  );
+  const overwriteWarning = $derived.by(() => {
+    if (!preview) return false;
+    const existing = new Set(app.snapshot.events.map((event) => event.id));
+    return preview.snapshot.events.some((event) => existing.has(event.id));
+  });
 
   function toggleDoctor(name: string) {
     assignedTo = assignedTo.includes(name)
@@ -100,20 +116,48 @@
     }, 'Events exported for doctors to import.');
   }
 
-  async function loadImportFile() {
-    const file = await pickTextFile();
-    if (!file) return;
-    importText = file.text;
+  function openImport() {
+    importOpen = true;
+    importText = '';
     preview = null;
   }
 
+  async function browseImport() {
+    const file = await pickTextFile();
+    if (!file) return;
+    importText = file.text;
+    await previewImportData();
+  }
+
+  async function pasteImport() {
+    importBusy = true;
+    try {
+      importText = await readClipboard();
+      await previewImportData();
+    } catch (error) {
+      app.notify('error', messageOf(error));
+    } finally {
+      importBusy = false;
+    }
+  }
+
   async function previewImportData() {
-    if (!app.services) return;
+    if (!app.services || !importText.trim()) {
+      app.notify('error', 'Paste a DocTrack event export first.');
+      return;
+    }
     importBusy = true;
     app.lastError = null;
     preview = null;
     try {
-      preview = await app.services.previewImport(importText);
+      const result = await app.services.previewImport(importText);
+      if (result.kind !== 'events') {
+        throw new Error('This data is not an event-list export.');
+      }
+      if (result.snapshot.events.length === 0) {
+        throw new Error('This export does not contain any events.');
+      }
+      preview = result;
     } catch (error) {
       app.notify('error', messageOf(error));
     } finally {
@@ -128,10 +172,10 @@
       (services) => services.applyImport(current),
       'Events imported and visible on the calendar.'
     );
-    if (result) {
-      preview = null;
-      importText = '';
-    }
+    if (!result) return;
+    importOpen = false;
+    preview = null;
+    importText = '';
   }
 </script>
 
@@ -139,6 +183,9 @@
   title="Academic events"
   subtitle="HR creates events, assigns them to doctors, and exports the list for import into calendars."
 >
+  <Button variant="secondary" onclick={openImport}>
+    <Upload size={14} /> Import
+  </Button>
   <Button variant="secondary" onclick={() => void exportEvents()}>
     <Download size={14} /> Export events
   </Button>
@@ -220,31 +267,57 @@
   </Card>
 </div>
 
-<Card className="application-import-card">
-  <div class="section-card-head">
-    <div>
-      <h2>Import events</h2>
-      <span class="tiny muted">Paste a DocTrack event export. Imported events appear on assigned doctors’ calendars.</span>
-    </div>
-    <Badge tone="neutral">Local only</Badge>
-  </div>
-  <Field label="Paste a DocTrack export" type="textarea" bind:value={importText} rows={4} placeholder="-----BEGIN DOCTRACK DATA-----…" />
-  <div class="row" style="margin-top:7px">
-    <Button size="sm" variant="secondary" onclick={loadImportFile}><Upload size={13} /> Choose file</Button>
-    <Button size="sm" onclick={previewImportData} disabled={importBusy || !importText.trim()}>
-      {importBusy ? 'Reading…' : 'Preview import'}
+<Dialog
+  open={importOpen}
+  title="Import events"
+  subtitle="Browse a file or paste a DocTrack event export to review it before importing."
+  onclose={() => (importOpen = false)}
+>
+  <div class="row" style="margin-bottom:8px">
+    <Button size="sm" variant="secondary" onclick={() => void browseImport()}>
+      <Upload size={13} /> Browse
+    </Button>
+    <Button size="sm" variant="secondary" onclick={() => void pasteImport()} disabled={importBusy}>
+      <ClipboardPaste size={13} /> Paste from clipboard
     </Button>
   </div>
-  {#if preview}
-    <div class="divider"></div>
-    <div class="between">
-      <strong>{preview.label}</strong>
-      <Badge tone="info">{preview.kind}</Badge>
-    </div>
-    <p class="tiny muted" style="margin:4px 0">{preview.counts.events} event(s) in this file.</p>
-    <div class="row">
-      <Button size="sm" onclick={applyImportData} disabled={app.busy}>Apply import</Button>
-      <Button size="sm" variant="ghost" onclick={() => (preview = null)}>Cancel</Button>
-    </div>
+  {#if importBusy}
+    <p class="tiny muted">Reading event data…</p>
   {/if}
-</Card>
+  {#if preview}
+    {#if overwriteWarning}
+      <div class="banner banner-warning" style="margin-bottom:8px">
+        Some events already exist in this app. Existing events with matching records will be updated.
+      </div>
+    {/if}
+    <div class="application-import-scroll">
+      <table class="table-base">
+        <thead><tr><th>Date</th><th>Event</th><th>Type</th><th>Assigned to</th></tr></thead>
+        <tbody>
+          {#each importedEvents as event (event.id)}
+            <tr>
+              <td>
+                {formatDate(event.date, app.settings?.dateFormat)}
+                {#if event.endDate} – {formatDate(event.endDate, app.settings?.dateFormat)}{/if}
+              </td>
+              <td>
+                <strong>{event.title}</strong>
+                {#if event.notes}<div class="tiny muted">{event.notes}</div>{/if}
+              </td>
+              <td><span class="chip cat-event">{event.type}</span></td>
+              <td>{event.assignedTo?.length ? event.assignedTo.join(', ') : 'Not assigned'}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <Button variant="success" onclick={() => void applyImportData()} disabled={app.busy}>
+        Apply import
+      </Button>
+      <Button variant="ghost" onclick={() => (preview = null)}>Cancel preview</Button>
+    </div>
+  {:else}
+    <p class="tiny muted">Imported events appear on the assigned doctors’ calendars.</p>
+  {/if}
+</Dialog>

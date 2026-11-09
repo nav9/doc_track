@@ -99,6 +99,7 @@ export function rosterDateRange(roster: Pick<DutyRoster, 'year' | 'month'>): ISO
 
 export interface DoctorChoice {
   id: string;
+  prefix?: string;
   name: string;
   employeeId: string;
   department: string;
@@ -117,6 +118,7 @@ export function syntheticSelfDoctor(
   if (!profile) return null;
   return {
     id: '',
+    prefix: profile.prefix,
     name: `${profile.prefix} ${profile.name}`.replace(/\s+/g, ' ').trim(),
     employeeId: profile.employeeId,
     department: profile.department,

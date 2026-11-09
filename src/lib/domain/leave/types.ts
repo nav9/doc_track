@@ -32,6 +32,9 @@ export interface LeaveRequest extends AuditFields {
   approvalNote: string;
   reason: string;
   notes: string;
+  /** Application metadata entered in the planner. */
+  purpose?: string;
+  coveringDoctor?: string;
   source: LeaveSource;
   /** For planner-created plans, the policy version used for the decision. */
   plannedWithPolicyVersionId: string | null;

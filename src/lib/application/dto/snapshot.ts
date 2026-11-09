@@ -5,7 +5,7 @@ import type { LeaveRequest } from '../../domain/leave/types';
 import type { LedgerTransaction } from '../../domain/ledger/types';
 import type { Duty, PdoRecord } from '../../domain/duty/types';
 import type { AttendanceRecord } from '../../domain/attendance/types';
-import type { CalendarEvent, EventName, Holiday } from '../../domain/calendar/holidays';
+import type { CalendarEvent, EventName, Holiday, HolidayName } from '../../domain/calendar/holidays';
 import type { DutyRoster, RosterDoctor } from '../../domain/roster/types';
 import type { SharedLeave } from '../../domain/multiuser/types';
 
@@ -22,6 +22,7 @@ export interface DataSnapshot {
   holidays: Holiday[];
   events: CalendarEvent[];
   eventNames: EventName[];
+  holidayNames: HolidayName[];
   doctors: RosterDoctor[];
   rosters: DutyRoster[];
   sharedLeaves: SharedLeave[];
@@ -41,6 +42,7 @@ export const SNAPSHOT_COLLECTIONS = [
   'holidays',
   'events',
   'eventNames',
+  'holidayNames',
   'doctors',
   'rosters',
   'sharedLeaves'
@@ -62,6 +64,7 @@ export function emptySnapshot(): DataSnapshot {
     holidays: [],
     events: [],
     eventNames: [],
+    holidayNames: [],
     doctors: [],
     rosters: [],
     sharedLeaves: [],

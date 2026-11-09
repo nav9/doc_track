@@ -3,9 +3,11 @@ import type { DateFormat } from '../common/dates';
 import type { LeaveStatus } from '../leave/types';
 
 export type UnitNumberStyle = 'roman' | 'number' | 'word';
+export type RosterFontFamily = 'helvetica' | 'times' | 'courier';
 
 export interface RosterDoctor extends AuditFields {
   id: string;
+  prefix?: string;
   name: string;
   employeeId: string;
   department: string;
@@ -56,6 +58,8 @@ export interface DutyRoster extends AuditFields {
   unitCount?: number;
   unitStyle?: UnitNumberStyle;
   dateFormat?: DateFormat;
+  fontFamily?: RosterFontFamily;
+  fontSize?: number;
   showLeaveWarnings?: boolean;
   leaveWarningStatuses?: LeaveStatus[];
 }

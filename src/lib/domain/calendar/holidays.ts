@@ -35,6 +35,12 @@ export interface EventName extends AuditFields {
   useCount: number;
 }
 
+export interface HolidayName extends AuditFields {
+  id: string;
+  name: string;
+  useCount: number;
+}
+
 export interface HolidayLookup {
   dates: Set<ISODate>;
   byDate: Map<ISODate, Holiday[]>;

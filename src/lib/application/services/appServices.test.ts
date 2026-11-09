@@ -301,6 +301,45 @@ describe('AppServices integration', () => {
     expect(preview.snapshot.doctors).toHaveLength(1);
   });
 
+  it('exports only the selected shared leave records', async () => {
+    await createProfile(services);
+    const doctor = await services.saveRosterDoctor({
+      name: 'Dr. Meera Nair',
+      employeeId: 'MC-901',
+      department: 'Orthopaedics',
+      designation: 'Senior Resident',
+      speciality: 'Joint Replacement',
+      unit: 'Unit II',
+      profileId: null,
+      notes: ''
+    });
+    const first = await services.saveSharedLeave({
+      doctorId: doctor.id,
+      startDate: '2026-11-10',
+      endDate: '2026-11-11',
+      category: 'CL',
+      status: 'approved',
+      reason: 'Family function',
+      notes: '',
+      source: 'whatsapp'
+    });
+    await services.saveSharedLeave({
+      doctorId: doctor.id,
+      startDate: '2026-11-20',
+      endDate: '2026-11-21',
+      category: 'RH',
+      status: 'pending',
+      reason: 'Personal work',
+      notes: '',
+      source: 'whatsapp'
+    });
+
+    const exported = await services.exportText('multiuser', { sharedLeaveIds: [first.id] });
+    const preview = await services.previewImport(exported.text);
+    expect(preview.snapshot.sharedLeaves).toHaveLength(1);
+    expect(preview.snapshot.sharedLeaves[0]?.id).toBe(first.id);
+  });
+
   it('clones reactive policy objects and publishes a new version without mutating history', async () => {
     const before = await services.snapshot();
     const active = before.policies[0];

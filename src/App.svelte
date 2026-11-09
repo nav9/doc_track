@@ -44,7 +44,7 @@
 
   const primaryNav = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/planner', label: 'Planner', icon: CalendarDays },
+    { path: '/planner', label: 'Leave planner', icon: CalendarDays },
     { path: '/roster', label: 'Duty roster', icon: ClipboardList },
     { path: '/approvals', label: 'Leave approvals', icon: ClipboardList },
     { path: '/multi-user', label: 'Multi User', icon: Users },
@@ -64,6 +64,7 @@
   ];
 
   let menuOpen = $state(false);
+  let sidebarCollapsed = $state(false);
   const path = $derived(currentPath());
   const pageTitle = $derived(ROUTE_TITLES[path] ?? 'DocTrack');
   const profile = $derived(app.profile);
@@ -82,6 +83,25 @@
 
   onMount(() => {
     initRouter();
+    const logWindowError = (event: ErrorEvent) => {
+      void app.services?.log(
+        'ERROR',
+        'window',
+        event.message || 'Unhandled browser error',
+        `${event.filename}:${event.lineno}:${event.colno}`
+      );
+    };
+    const logRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason;
+      void app.services?.log(
+        'ERROR',
+        'promise',
+        reason instanceof Error ? reason.message : String(reason),
+        reason instanceof Error ? (reason.stack ?? '') : JSON.stringify(reason)
+      );
+    };
+    window.addEventListener('error', logWindowError);
+    window.addEventListener('unhandledrejection', logRejection);
     void (async () => {
       await app.init();
       if (import.meta.env.VITE_DOCTRACK_TEST_DATA !== 'true' || !app.services) return;
@@ -92,6 +112,10 @@
         console.error('[DocTrack] Test data could not be loaded.', error);
       }
     })();
+    return () => {
+      window.removeEventListener('error', logWindowError);
+      window.removeEventListener('unhandledrejection', logRejection);
+    };
   });
 
   function go(target: string) {
@@ -136,8 +160,8 @@
 {:else if !app.settings?.onboarded || !profile}
   <Onboarding />
 {:else}
-  <div class="app-shell">
-    <aside class="sidebar" class:open={menuOpen} aria-label="Main navigation">
+  <div class="app-shell" class:sidebar-collapsed={sidebarCollapsed}>
+    <aside class="sidebar" class:open={menuOpen} class:collapsed={sidebarCollapsed} aria-label="Main navigation">
       <a class="brand" href="#/" onclick={() => (menuOpen = false)}>
         <span class="brand-mark"><Stethoscope size={18} /></span>
         <span>
@@ -202,6 +226,15 @@
           >
             {#if menuOpen}<X size={17} />{:else}<Menu size={17} />{/if}
           </button>
+          <button
+            type="button"
+            class="icon-btn desktop-only"
+            aria-label={sidebarCollapsed ? 'Expand side menu' : 'Collapse side menu'}
+            title={sidebarCollapsed ? 'Expand side menu' : 'Collapse side menu'}
+            onclick={() => (sidebarCollapsed = !sidebarCollapsed)}
+          >
+            {#if sidebarCollapsed}<Menu size={17} />{:else}<X size={17} />{/if}
+          </button>
           <span class="topbar-title">{pageTitle}</span>
         </div>
         <div class="topbar-right">
@@ -263,10 +296,6 @@
         </div>
       {/if}
 
-      <footer class="app-footer">
-        <span>DocTrack {APP_VERSION} · all calculations happen on this device.</span>
-        <span>Leave rules follow the department policy; check the approved circular before applying.</span>
-      </footer>
     </div>
   </div>
 {/if}

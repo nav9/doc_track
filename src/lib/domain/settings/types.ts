@@ -103,3 +103,22 @@ export function backupDue(
   );
   return days >= settings.backupReminderDays;
 }
+
+/** Before the first backup, wait one full reminder interval after onboarding. */
+export function backupReminderDue(
+  settings: Pick<
+    AppSettings,
+    'backupReminderEnabled' | 'backupReminderDays' | 'lastBackupAt' | 'createdAt'
+  >,
+  now: ISODate
+): boolean {
+  if (!settings.backupReminderEnabled) return false;
+  if (settings.lastBackupAt) return backupDue(settings, now);
+  const baseline = settings.createdAt.slice(0, 10);
+  if (!baseline) return false;
+  const days = Math.floor(
+    (new Date(`${now}T00:00:00Z`).getTime() - new Date(`${baseline}T00:00:00Z`).getTime()) /
+      86400000
+  );
+  return days >= settings.backupReminderDays;
+}

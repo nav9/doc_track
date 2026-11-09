@@ -51,7 +51,7 @@ import {
   weekendDaysFor
 } from '../../engines/duty-engine/dutyEngine';
 import type { AttendanceRecord } from '../../domain/attendance/types';
-import type { CalendarEvent, EventName, Holiday } from '../../domain/calendar/holidays';
+import type { CalendarEvent, EventName, Holiday, HolidayName } from '../../domain/calendar/holidays';
 import { validateHoliday } from '../../domain/calendar/holidays';
 import type { DutyRoster, RosterDoctor } from '../../domain/roster/types';
 import type { SharedLeave } from '../../domain/multiuser/types';
@@ -94,12 +94,16 @@ export interface CreateLeaveInput {
   status?: LeaveStatus;
   reason: string;
   notes: string;
+  purpose?: string;
+  coveringDoctor?: string;
   source?: LeaveRequest['source'];
   approvalState?: ApprovalState;
 }
 
 export interface RosterSaveOptions {
   syncDuties: boolean;
+  /** Draft autosaves may contain unassigned days. */
+  allowIncomplete?: boolean;
 }
 
 export interface SharedLeaveInput {
@@ -141,6 +145,7 @@ export class AppServices {
     }
 
     await this.ensureEntitlementCredits();
+    await this.ensureHolidayNames();
     await this.pruneLogs();
     return this.repos.snapshot.readAll();
   }
@@ -466,7 +471,12 @@ export class AppServices {
           effectiveDate: input.startDate,
           source: input.category === 'LOP' ? 'lop' : 'usage',
           reason: `${input.category} from ${input.startDate} to ${input.endDate}`,
-          notes: input.reason,
+          notes: [
+            input.coveringDoctor ? `Covering doctor: ${input.coveringDoctor}` : '',
+            input.purpose ?? input.reason
+          ]
+            .filter(Boolean)
+            .join(' · '),
           now,
           leaveRequestId: leaveId,
           approvalStatus,
@@ -493,6 +503,8 @@ export class AppServices {
       approvalNote: evaluation.consequences.approvalNote,
       reason: input.reason,
       notes: input.notes,
+      purpose: input.purpose ?? input.reason,
+      coveringDoctor: input.coveringDoctor ?? '',
       source: input.source ?? 'manual',
       plannedWithPolicyVersionId: input.source === 'planner' ? policy.id : null,
       ledgerTransactionIds: ledgerTransactions.map((transaction) => transaction.id),
@@ -953,6 +965,7 @@ export class AppServices {
       createdAt: existing?.createdAt ?? now,
       updatedAt: now
     });
+    await this.rememberHolidayName(input.name);
     await this.log('INFO', 'holidays', 'Holiday saved', `${input.kind} ${input.date}`);
   }
 
@@ -976,6 +989,7 @@ export class AppServices {
         updatedAt: now
       }));
     if (toAdd.length) await this.repos.holidays.bulkPut(toAdd);
+    for (const holiday of toAdd) await this.rememberHolidayName(holiday.name);
     await this.log('INFO', 'holidays', 'Holidays imported', `${toAdd.length} added`);
     return { added: toAdd.length, skipped: holidays.length - toAdd.length };
   }
@@ -1083,7 +1097,7 @@ export class AppServices {
         );
       }
       seenDates.add(entry.date);
-      if (!entry.doctorName.trim()) {
+      if (!options.allowIncomplete && !entry.doctorName.trim()) {
         throw new ServiceError('ROSTER_DOCTOR', `Choose a doctor for ${entry.date}.`);
       }
     }
@@ -1173,6 +1187,101 @@ export class AppServices {
     return saved;
   }
 
+  /** Import one roster package, adding unseen doctors without overwriting known doctors. */
+  async importRoster(preview: ImportPreview): Promise<{
+    roster: DutyRoster;
+    addedDoctors: number;
+    replaced: boolean;
+  }> {
+    if (preview.kind !== 'roster') {
+      throw new ServiceError('ROSTER_IMPORT_KIND', 'This is not a duty-roster export.');
+    }
+    const current = await this.snapshot();
+    const settings = await this.getSettings();
+    if (settings.versioningEnabled) {
+      await this.createVersion('import', `Before roster import — ${preview.label}`);
+    }
+    const imported = clonePlain(preview.snapshot);
+    const source = imported.rosters[0];
+    if (!source) throw new ServiceError('ROSTER_IMPORT_EMPTY', 'No roster was found in this data.');
+
+    let addedDoctors = 0;
+    for (const doctor of imported.doctors) {
+      const known = current.doctors.find(
+        (item) =>
+          item.id === doctor.id ||
+          (item.employeeId &&
+            doctor.employeeId &&
+            item.employeeId.trim().toLowerCase() === doctor.employeeId.trim().toLowerCase()) ||
+          item.name.trim().toLowerCase() === doctor.name.trim().toLowerCase()
+      );
+      if (known) continue;
+      await this.repos.doctors.put(doctor);
+      addedDoctors += 1;
+    }
+
+    const existing = current.rosters.find(
+      (roster) =>
+        roster.year === source.year &&
+        roster.month === source.month &&
+        roster.department.trim().toLowerCase() === source.department.trim().toLowerCase()
+    );
+    const roster = {
+      ...source,
+      id: existing?.id ?? source.id,
+      createdAt: existing?.createdAt ?? source.createdAt,
+      entries: source.entries.map((entry) => ({ ...entry, id: entry.id || newId('rentry') }))
+    };
+    const saved = await this.saveRoster(roster, { syncDuties: true, allowIncomplete: true });
+    await this.log(
+      'INFO',
+      'roster',
+      existing ? 'Roster replaced from import' : 'Roster imported',
+      `${saved.month}/${saved.year} · ${saved.department} · ${addedDoctors} new doctor(s)`
+    );
+    return { roster: saved, addedDoctors, replaced: Boolean(existing) };
+  }
+
+  private async ensureHolidayNames(): Promise<void> {
+    const snapshot = await this.snapshot();
+    const known = new Set(snapshot.holidayNames.map((item) => item.name.trim().toLowerCase()));
+    const now = this.clock.nowISO();
+    for (const holiday of snapshot.holidays) {
+      const key = holiday.name.trim().toLowerCase();
+      if (!key || known.has(key)) continue;
+      const record: HolidayName = {
+        id: newId('holidayname'),
+        name: holiday.name.trim(),
+        useCount: 1,
+        createdAt: now,
+        updatedAt: now
+      };
+      await this.repos.holidayNames.put(record);
+      known.add(key);
+    }
+  }
+
+  private async rememberHolidayName(name: string): Promise<void> {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const snapshot = await this.snapshot();
+    const existing = snapshot.holidayNames.find(
+      (item) => item.name.trim().toLowerCase() === trimmed.toLowerCase()
+    );
+    const now = this.clock.nowISO();
+    await this.repos.holidayNames.put(
+      existing
+        ? { ...existing, useCount: existing.useCount + 1, updatedAt: now }
+        : {
+            id: newId('holidayname'),
+            name: trimmed,
+            useCount: 1,
+            createdAt: now,
+            updatedAt: now
+          }
+    );
+  }
+
   async deleteRoster(id: string): Promise<void> {
     const snapshot = await this.snapshot();
     const roster = snapshot.rosters.find((item) => item.id === id);
@@ -1209,6 +1318,7 @@ export class AppServices {
     const doctor: RosterDoctor = {
       ...input,
       id: existing?.id ?? newId('doctor'),
+      prefix: input.prefix?.trim() || existing?.prefix || 'Dr.',
       name: input.name.trim(),
       employeeId: input.employeeId.trim(),
       createdAt: existing?.createdAt ?? now,
@@ -1280,6 +1390,7 @@ export class AppServices {
     );
     if (existing) return existing;
     return this.saveRosterDoctor({
+      prefix: profile.prefix,
       name,
       employeeId: profile.employeeId,
       department: profile.department,
@@ -1410,7 +1521,7 @@ export class AppServices {
   private exportSnapshot(
     kind: ExportKind,
     full: DataSnapshot,
-    options: { rosterId?: string; year?: number; approvedOnly?: boolean }
+    options: { rosterId?: string; year?: number; approvedOnly?: boolean; sharedLeaveIds?: string[] }
   ): DataSnapshot {
     const base = emptySnapshot();
     if (kind === 'full') {
@@ -1433,20 +1544,31 @@ export class AppServices {
       return { ...base, policies: full.policies };
     }
     if (kind === 'roster') {
+      const rosters = options.rosterId
+        ? full.rosters.filter((roster) => roster.id === options.rosterId)
+        : full.rosters;
+      const departments = new Set(
+        rosters.map((roster) => roster.department.trim().toLowerCase()).filter(Boolean)
+      );
       return {
         ...base,
-        rosters: options.rosterId
-          ? full.rosters.filter((roster) => roster.id === options.rosterId)
-          : full.rosters
+        rosters,
+        doctors: full.doctors.filter(
+          (doctor) =>
+            !departments.size || departments.has(doctor.department.trim().toLowerCase())
+        )
       };
     }
     if (kind === 'multiuser') {
+      const selected = options.sharedLeaveIds ? new Set(options.sharedLeaveIds) : null;
       return {
         ...base,
         doctors: full.doctors,
-        sharedLeaves: options.approvedOnly
-          ? full.sharedLeaves.filter((leave) => leave.status === 'approved')
-          : full.sharedLeaves
+        sharedLeaves: selected
+          ? full.sharedLeaves.filter((leave) => selected.has(leave.id))
+          : options.approvedOnly
+            ? full.sharedLeaves.filter((leave) => leave.status === 'approved')
+            : full.sharedLeaves
       };
     }
     if (kind === 'events') {
@@ -1456,13 +1578,20 @@ export class AppServices {
       ...base,
       holidays: options.year
         ? full.holidays.filter((holiday) => holiday.year === options.year)
-        : full.holidays
+        : full.holidays,
+      holidayNames: full.holidayNames
     };
   }
 
   async exportText(
     kind: ExportKind,
-    options: { rosterId?: string; year?: number; label?: string; approvedOnly?: boolean } = {}
+    options: {
+      rosterId?: string;
+      year?: number;
+      label?: string;
+      approvedOnly?: boolean;
+      sharedLeaveIds?: string[];
+    } = {}
   ): Promise<{ text: string; filename: string; count: number }> {
     const snapshot = await this.snapshot();
     const part = this.exportSnapshot(kind, snapshot, options);
@@ -1573,6 +1702,7 @@ export class AppServices {
       mergeCollection('holidays', preview.snapshot.holidays);
       mergeCollection('events', preview.snapshot.events);
       mergeCollection('eventNames', preview.snapshot.eventNames);
+      mergeCollection('holidayNames', preview.snapshot.holidayNames);
       mergeCollection('doctors', preview.snapshot.doctors);
       mergeCollection('rosters', preview.snapshot.rosters);
       mergeCollection('sharedLeaves', preview.snapshot.sharedLeaves);
@@ -1606,6 +1736,7 @@ export class AppServices {
 
     await this.repos.snapshot.replaceAll(merged);
     this.settingsCache = merged.settings[0] ?? settings;
+    await this.ensureHolidayNames();
     await this.log('INFO', 'import', 'Full backup restored', preview.label);
     return {
       versionId,

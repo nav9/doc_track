@@ -13,7 +13,7 @@ import type { LeaveRequest } from '../../domain/leave/types';
 import type { LedgerTransaction } from '../../domain/ledger/types';
 import type { Duty, PdoRecord } from '../../domain/duty/types';
 import type { AttendanceRecord } from '../../domain/attendance/types';
-import type { CalendarEvent, EventName, Holiday } from '../../domain/calendar/holidays';
+import type { CalendarEvent, EventName, Holiday, HolidayName } from '../../domain/calendar/holidays';
 import type { DutyRoster, RosterDoctor } from '../../domain/roster/types';
 import type { SharedLeave } from '../../domain/multiuser/types';
 import type { LogEntry } from '../../domain/settings/types';
@@ -63,6 +63,7 @@ export interface Repositories {
   holidays: CollectionRepository<Holiday>;
   events: CollectionRepository<CalendarEvent>;
   eventNames: CollectionRepository<EventName>;
+  holidayNames: CollectionRepository<HolidayName>;
   doctors: CollectionRepository<RosterDoctor>;
   rosters: CollectionRepository<DutyRoster>;
   sharedLeaves: CollectionRepository<SharedLeave>;

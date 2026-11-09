@@ -136,7 +136,6 @@
       tone={report?.shortage ? 'warning' : 'success'}
       label="Punches counted"
     />
-    <p class="tiny muted" style="margin:7px 0 0">{report?.projectionNote}</p>
   </Card>
   <Card>
     <div class="section-card-head"><h2>Confirmed</h2></div>
@@ -147,20 +146,6 @@
     <div class="between small"><span>Leave days</span><strong>{report?.leaveDays ?? 0}</strong></div>
     <div class="between small"><span>Sundays excluded</span><strong>{report?.excludedSundays ?? 0}</strong></div>
     <div class="between small"><span>Holidays excluded</span><strong>{report?.excludedHolidays ?? 0}</strong></div>
-  </Card>
-  <Card>
-    <div class="section-card-head"><h2>How counting works</h2></div>
-    <p class="tiny muted" style="margin:0">
-      Only confirmed punches are verified attendance. Past working days without a record are
-      shown as <em>assumed</em>, never as confirmed. Future days stay projected. A Sunday punch is
-      allowed when it helps meet the monthly requirement. Punches are never assumed on confirmed
-      leave, GH/RH, or during a maternity leave where NMC is deactivated.
-    </p>
-    <div class="legend" style="margin-top:8px">
-      <span><i class="legend-dot cat-nmc"></i>NMC</span>
-      <span><i class="legend-dot cat-nmc-assumed"></i>NMC punch (assumed)</span>
-      <span><i class="legend-dot cat-holiday"></i>Sunday/holiday</span>
-    </div>
   </Card>
 </div>
 
@@ -202,5 +187,21 @@
   <div class="legend" style="margin-top:8px">
     <span><i class="legend-dot cat-nmc"></i>NMC</span>
     <span><i class="legend-dot cat-nmc-assumed"></i>NMC punch (assumed)</span>
+    <span><i class="legend-dot cat-holiday"></i>Sunday/holiday</span>
+  </div>
+</Card>
+
+<Card>
+  <div class="section-card-head"><h2>How counting works</h2></div>
+  <p class="tiny muted" style="margin:0">
+    Only confirmed punches are verified attendance. Past working days without a record are shown
+    as <em>assumed</em>, never as confirmed. Future days stay projected. A Sunday punch is allowed
+    when it helps meet the monthly requirement. Punches are never assumed on confirmed leave,
+    GH/RH, or during a maternity leave where NMC is deactivated.
+  </p>
+  <div class="legend" style="margin-top:8px">
+    <span><i class="legend-dot cat-nmc"></i>NMC</span>
+    <span><i class="legend-dot cat-nmc-assumed"></i>NMC punch (assumed)</span>
+    <span><i class="legend-dot cat-holiday"></i>Sunday/holiday</span>
   </div>
 </Card>

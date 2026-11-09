@@ -14,13 +14,14 @@ import type { LeaveRequest } from '../../domain/leave/types';
 import type { LedgerTransaction } from '../../domain/ledger/types';
 import type { Duty, PdoRecord } from '../../domain/duty/types';
 import type { AttendanceRecord } from '../../domain/attendance/types';
-import type { CalendarEvent, EventName, Holiday } from '../../domain/calendar/holidays';
+import type { CalendarEvent, EventName, Holiday, HolidayName } from '../../domain/calendar/holidays';
 import type { DutyRoster, RosterDoctor } from '../../domain/roster/types';
 import type { SharedLeave } from '../../domain/multiuser/types';
 import type { LogEntry } from '../../domain/settings/types';
 import type { DataSnapshot } from '../../application/dto/snapshot';
 import { SNAPSHOT_COLLECTIONS } from '../../application/dto/snapshot';
 import type { DataVersion } from '../../application/dto/version';
+import { clonePlain } from '../../domain/common/clone';
 
 function collection<T extends { id: string }>(
   db: IDBPDatabase<unknown>,
@@ -34,12 +35,17 @@ function collection<T extends { id: string }>(
       return (await db.get(store, id)) as T | undefined;
     },
     async put(value) {
-      await db.put(store, value);
+      // Svelte $state objects are proxies; IndexedDB cannot structured-clone
+      // proxies. Persist a JSON-safe plain copy at the storage boundary.
+      await db.put(store, clonePlain(value));
     },
     async bulkPut(values) {
       if (values.length === 0) return;
       const transaction = db.transaction(store, 'readwrite');
-      await Promise.all([...values.map((value) => transaction.store.put(value)), transaction.done]);
+      await Promise.all([
+        ...values.map((value) => transaction.store.put(clonePlain(value))),
+        transaction.done
+      ]);
     },
     async remove(id) {
       await db.delete(store, id);
@@ -59,7 +65,7 @@ export function createIndexedDbRepositories(db: IDBPDatabase<unknown>): Reposito
       return (await db.get('settings', 'app')) as AppSettings | undefined;
     },
     async put(value) {
-      await db.put('settings', value);
+      await db.put('settings', clonePlain(value));
     }
   };
 
@@ -91,6 +97,7 @@ export function createIndexedDbRepositories(db: IDBPDatabase<unknown>): Reposito
         holidays: [],
         events: [],
         eventNames: [],
+        holidayNames: [],
         doctors: [],
         rosters: [],
         sharedLeaves: [],
@@ -119,7 +126,7 @@ export function createIndexedDbRepositories(db: IDBPDatabase<unknown>): Reposito
           await objectStore.clear();
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const items = ((value as any)[store] as { id?: string }[]) ?? [];
-          await Promise.all(items.map((item) => objectStore.put(item)));
+          await Promise.all(items.map((item) => objectStore.put(clonePlain(item))));
         })
       );
       await transaction.done;
@@ -142,6 +149,7 @@ export function createIndexedDbRepositories(db: IDBPDatabase<unknown>): Reposito
     holidays: collection<Holiday>(db, 'holidays'),
     events: collection<CalendarEvent>(db, 'events'),
     eventNames: collection<EventName>(db, 'eventNames'),
+    holidayNames: collection<HolidayName>(db, 'holidayNames'),
     doctors: collection<RosterDoctor>(db, 'doctors'),
     rosters: collection<DutyRoster>(db, 'rosters'),
     sharedLeaves: collection<SharedLeave>(db, 'sharedLeaves'),

@@ -1,5 +1,13 @@
 <script lang="ts">
-  import { AlertTriangle, ArrowRight, CalendarPlus, Download } from '@lucide/svelte';
+  import {
+    AlertTriangle,
+    ArrowRight,
+    CalendarPlus,
+    ClipboardCopy,
+    ClipboardPaste,
+    Download,
+    Upload
+  } from '@lucide/svelte';
   import { app } from '../lib/app/state.svelte';
   import { navigate } from '../lib/app/router.svelte';
   import PageHeader from '../lib/components/ui/PageHeader.svelte';
@@ -13,9 +21,13 @@
     type Recommendation
   } from '../lib/engines/recommendation-engine/recommendationEngine';
   import { computeMonthAttendance } from '../lib/engines/attendance-engine/attendanceEngine';
-  import { backupDue } from '../lib/domain/settings/types';
+  import { backupReminderDue } from '../lib/domain/settings/types';
   import { SHORT_MONTH_NAMES, daysInMonth, eachDate, formatDate } from '../lib/domain/common/dates';
   import { isActiveLeave, leaveStatusLabel } from '../lib/domain/leave/types';
+  import Dialog from '../lib/components/ui/Dialog.svelte';
+  import { readClipboard, writeClipboard, pickTextFile, downloadText } from '../lib/infrastructure/files/files';
+  import type { ImportPreview } from '../lib/application/dto/version';
+  import { messageOf } from '../lib/application/services/errors';
   import {
     addMark,
     categoryChipClass,
@@ -28,6 +40,12 @@
 
   const today = $derived(app.today);
   const profile = $derived(app.profile);
+
+  let transferOpen = $state(false);
+  let transferMode = $state<'export' | 'import'>('export');
+  let transferText = $state('');
+  let transferPreview = $state<ImportPreview | null>(null);
+  let transferBusy = $state(false);
   const policy = $derived(app.activePolicy);
   const dateFormat = $derived(app.settings?.dateFormat ?? 'dd MMM yyyy');
 
@@ -157,7 +175,9 @@
     });
   });
 
-  const backupNeeded = $derived(Boolean(app.settings && backupDue(app.settings, today)));
+  const backupNeeded = $derived(
+    Boolean(app.settings && backupReminderDue(app.settings, today))
+  );
 
   const todayLeave = $derived(
     app.snapshot.leaves.find(
@@ -270,9 +290,92 @@
     if (hour < 17) return 'Good afternoon';
     return 'Good evening';
   });
+
+  function openTransfer(mode: 'export' | 'import') {
+    transferMode = mode;
+    transferOpen = true;
+    transferText = '';
+    transferPreview = null;
+  }
+
+  async function exportEverything() {
+    transferBusy = true;
+    const text = await app.perform(async (services) => {
+      const result = await services.exportText('full');
+      return result.text;
+    });
+    transferBusy = false;
+    if (!text) return;
+    transferText = text;
+    transferMode = 'export';
+    transferOpen = true;
+  }
+
+  async function copyEverything() {
+    if (!transferText) return;
+    try {
+      await writeClipboard(transferText);
+      app.notify('success', 'Complete DocTrack export copied to the clipboard.');
+    } catch (error) {
+      app.notify('error', messageOf(error));
+    }
+  }
+
+  async function browseTransfer() {
+    const file = await pickTextFile();
+    if (!file) return;
+    transferText = file.text;
+    await previewTransfer();
+  }
+
+  async function pasteTransfer() {
+    transferBusy = true;
+    try {
+      transferText = await readClipboard();
+      await previewTransfer();
+    } catch (error) {
+      app.notify('error', messageOf(error));
+    } finally {
+      transferBusy = false;
+    }
+  }
+
+  async function previewTransfer() {
+    if (!app.services || !transferText.trim()) {
+      app.notify('error', 'Choose or paste a DocTrack export first.');
+      return;
+    }
+    transferBusy = true;
+    transferPreview = null;
+    try {
+      transferPreview = await app.services.previewImport(transferText);
+    } catch (error) {
+      app.notify('error', messageOf(error));
+    } finally {
+      transferBusy = false;
+    }
+  }
+
+  async function applyTransfer() {
+    if (!transferPreview) return;
+    const current = transferPreview;
+    const result = await app.perform(
+      (services) => services.applyImport(current),
+      'DocTrack data restored. The previous state is in version history.'
+    );
+    if (!result) return;
+    transferPreview = null;
+    transferText = '';
+    transferOpen = false;
+  }
+
+  function downloadTransfer() {
+    if (transferText) downloadText('DocTrack_Complete_Backup.txt', transferText);
+  }
 </script>
 
 <PageHeader
+  showHeading
   title={`${greeting}${profile ? `, ${profile.prefix} ${profile.name}` : ''}`}
   subtitle={`${formatDate(today, dateFormat)} · ${profile?.department ?? ''}${
     todayLeave ? ` · on ${todayLeave.category} leave today` : ''
@@ -283,46 +386,31 @@
   </Button>
   <Button onclick={() => navigate('/roster')}>Open duty roster</Button>
   <Button variant="secondary" onclick={() => navigate('/multi-user')}>Multi User</Button>
+  <Button variant="secondary" onclick={() => openTransfer('import')}>
+    <Upload size={14} /> Import
+  </Button>
+  <Button variant="secondary" onclick={() => void exportEverything()} disabled={transferBusy}>
+    <Download size={14} /> Export all
+  </Button>
 </PageHeader>
 
-{#if backupNeeded || (app.settings && !app.settings.storageWarningDismissed)}
-  <div class="stack-sm" style="margin-bottom:12px">
-    {#if backupNeeded}
-      <div class="banner banner-warning">
-        <AlertTriangle class="banner-icon" size={15} />
-        <div class="grow">
-          <strong>
-            {app.settings?.lastBackupAt
-              ? `Last backup: ${formatDate(app.settings.lastBackupAt.slice(0, 10), dateFormat)}`
-              : 'No backup recorded yet'}
-          </strong>
-          <div class="tiny muted">
-            Browser storage can be cleared by the browser or the operating system. Keep an export
-            outside the browser.
-          </div>
-        </div>
-        <Button size="sm" variant="secondary" onclick={() => void app.backupNow()}>
-          <Download size={13} /> Back up now
-        </Button>
+{#if backupNeeded}
+  <div class="banner banner-warning" style="margin-bottom:12px">
+    <AlertTriangle class="banner-icon" size={15} />
+    <div class="grow">
+      <strong>
+        {app.settings?.lastBackupAt
+          ? `Last backup: ${formatDate(app.settings.lastBackupAt.slice(0, 10), dateFormat)}`
+          : 'No backup recorded yet'}
+      </strong>
+      <div class="tiny muted">
+        Browser storage can be cleared by the browser or the operating system. Keep an export
+        outside the browser.
       </div>
-    {/if}
-    {#if app.settings && !app.settings.storageWarningDismissed}
-      <div class="banner banner-info">
-        <div class="grow">
-          <strong>This device is the only copy</strong>
-          <div class="tiny muted">
-            DocTrack has no server. Export a backup after you enter your leave and duty records.
-          </div>
-        </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          onclick={() => void app.perform((services) => services.markDismissed('storageWarningDismissed'))}
-        >
-          Dismiss
-        </Button>
-      </div>
-    {/if}
+    </div>
+    <Button size="sm" variant="secondary" onclick={() => void app.backupNow()}>
+      <Download size={13} /> Back up now
+    </Button>
   </div>
 {/if}
 
@@ -412,7 +500,7 @@
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-bottom:12px">
   <Card>
     <div class="section-card-head">
-      <h2>This month</h2>
+      <h2>NMC attendance {SHORT_MONTH_NAMES[calMonth - 1]}</h2>
       <span class="tiny muted">{report?.required ?? 21} punches required</span>
     </div>
     {#if report}
@@ -433,7 +521,6 @@
         <div><dt>Leave days</dt><dd>{report.leaveDays}</dd></div>
         <div><dt>Excluded</dt><dd>{report.excludedSundays} Sun · {report.excludedHolidays} hol.</dd></div>
       </div>
-      <p class="tiny muted" style="margin:7px 0 0">{report.projectionNote}</p>
 
       <div class="divider"></div>
       <div class="stack-sm">
@@ -457,7 +544,7 @@
       <p class="tiny muted">No published policy is active, so attendance cannot be projected.</p>
     {/if}
     <div class="row" style="margin-top:8px">
-      <Button size="sm" variant="secondary" onclick={() => navigate('/attendance')}>Open attendance</Button>
+      <Button size="sm" variant="secondary" onclick={() => navigate('/attendance')}>View NMC page</Button>
     </div>
   </Card>
 
@@ -581,3 +668,76 @@
     {/if}
   </Card>
 </div>
+
+<Dialog
+  open={transferOpen}
+  title={transferMode === 'export' ? 'Export complete DocTrack data' : 'Import complete DocTrack data'}
+  subtitle={transferMode === 'export'
+    ? 'Copy or download the full backup. The BEGIN/END markers are included.'
+    : 'Choose a file or paste a full backup, then review it before restoring.'}
+  onclose={() => (transferOpen = false)}
+>
+  {#if transferMode === 'export'}
+    <div class="stack-sm">
+      <div class="banner banner-info">
+        The export includes profiles, leave, ledger, duties, rosters, holidays, events, doctors and
+        settings. Keep it outside this browser.
+      </div>
+      <div class="detail-grid">
+        <div><dt>Profiles</dt><dd>{app.snapshot.profiles.length}</dd></div>
+        <div><dt>Leave records</dt><dd>{app.snapshot.leaves.length}</dd></div>
+        <div><dt>Ledger</dt><dd>{app.snapshot.ledger.length}</dd></div>
+        <div><dt>Duty records</dt><dd>{app.snapshot.duties.length}</dd></div>
+        <div><dt>Rosters</dt><dd>{app.snapshot.rosters.length}</dd></div>
+        <div><dt>Holidays</dt><dd>{app.snapshot.holidays.length}</dd></div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <Button variant="success" onclick={() => void copyEverything()}>
+        <ClipboardCopy size={14} /> Copy to clipboard
+      </Button>
+      <Button variant="secondary" onclick={downloadTransfer}>Download file</Button>
+      <Button variant="ghost" onclick={() => (transferOpen = false)}>Close</Button>
+    </div>
+  {:else}
+    <div class="row" style="margin-bottom:8px">
+      <Button size="sm" variant="secondary" onclick={() => void browseTransfer()}>
+        <Upload size={13} /> Browse
+      </Button>
+      <Button size="sm" variant="secondary" onclick={() => void pasteTransfer()} disabled={transferBusy}>
+        <ClipboardPaste size={13} /> Paste from clipboard
+      </Button>
+    </div>
+    {#if transferBusy}<p class="tiny muted">Reading backup…</p>{/if}
+    {#if transferPreview}
+      {#if transferPreview.kind === 'full'}
+        <div class="banner banner-warning" style="margin-bottom:8px">
+          This is a complete backup. Applying it replaces all current app data.
+        </div>
+      {/if}
+      <div class="between">
+        <strong>{transferPreview.label}</strong>
+        <Badge tone="info">{transferPreview.kind}</Badge>
+      </div>
+      <div class="detail-grid" style="margin-top:6px">
+        <div><dt>Leave records</dt><dd>{transferPreview.counts.leaveRequests}</dd></div>
+        <div><dt>Ledger</dt><dd>{transferPreview.counts.ledgerEntries}</dd></div>
+        <div><dt>Duties</dt><dd>{transferPreview.counts.duties}</dd></div>
+        <div><dt>Holidays</dt><dd>{transferPreview.counts.holidays}</dd></div>
+        <div><dt>Rosters</dt><dd>{transferPreview.counts.rosterMonths}</dd></div>
+        <div><dt>Profiles</dt><dd>{transferPreview.counts.profiles}</dd></div>
+      </div>
+      {#if transferPreview.invalidCount > 0}
+        <div class="banner banner-warning" style="margin-top:7px">
+          {transferPreview.invalidCount} unreadable record(s) will be skipped.
+        </div>
+      {/if}
+      <div class="row" style="margin-top:10px">
+        <Button variant="success" onclick={() => void applyTransfer()} disabled={app.busy}>Use this data</Button>
+        <Button variant="ghost" onclick={() => (transferPreview = null)}>Cancel preview</Button>
+      </div>
+    {:else if !transferBusy}
+      <p class="tiny muted">The full backup is restored only after you review and confirm it.</p>
+    {/if}
+  {/if}
+</Dialog>

@@ -8,7 +8,7 @@
 import { openDB, type IDBPDatabase } from 'idb';
 
 export const DB_NAME = 'doctrack';
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 export const VALUE_STORES = [
   'profiles',
@@ -23,6 +23,7 @@ export const VALUE_STORES = [
   'holidays',
   'events',
   'eventNames',
+  'holidayNames',
   'doctors',
   'rosters',
   'sharedLeaves',
@@ -70,6 +71,9 @@ export function openDatabase(): Promise<IDBPDatabase<unknown>> {
         }
         if (oldVersion < 2 && !database.objectStoreNames.contains('sharedLeaves')) {
           database.createObjectStore('sharedLeaves', { keyPath: 'id' });
+        }
+        if (oldVersion < 3 && !database.objectStoreNames.contains('holidayNames')) {
+          database.createObjectStore('holidayNames', { keyPath: 'id' });
         }
       },
       blocked() {

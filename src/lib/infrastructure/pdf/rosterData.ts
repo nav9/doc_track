@@ -5,7 +5,7 @@
  * calendar. Long names/remarks are wrapped into multiple lines so nothing is
  * clipped on A4.
  */
-import type { DutyRoster, RosterPdfOptions } from '../../domain/roster/types';
+import type { DutyRoster, RosterFontFamily, RosterPdfOptions } from '../../domain/roster/types';
 import { formatDate, DAY_NAMES, dayOfWeek } from '../../domain/common/dates';
 import { unitLabel } from '../../domain/roster/schedule';
 
@@ -36,6 +36,8 @@ export interface RosterPdfData {
   footerNote: string;
   showSignatureBlock: boolean;
   orientation: 'portrait' | 'landscape';
+  fontFamily: RosterFontFamily;
+  fontSize: number;
 }
 
 const MONTH_NAMES = [
@@ -61,7 +63,7 @@ export function prepareRosterPdfData(
   const columns: PdfColumn[] = [
     { key: 'date', label: 'DATE', width: 28 },
     { key: 'days', label: 'DAYS', width: 25 },
-    { key: 'unit', label: 'UNIT', width: 16, align: 'center' },
+    { key: 'unit', label: 'UNIT', width: 16 },
     { key: 'doctor', label: "DOCTOR'S NAME", width: 45 }
   ];
 
@@ -91,7 +93,9 @@ export function prepareRosterPdfData(
     rows,
     footerNote: 'Note: No alteration to be made without the permission of the undersigned',
     showSignatureBlock: options.showSignatureBlock,
-    orientation: options.orientation
+    orientation: options.orientation,
+    fontFamily: roster.fontFamily ?? 'helvetica',
+    fontSize: roster.fontSize ?? 8
   };
 }
 

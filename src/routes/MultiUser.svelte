@@ -450,7 +450,7 @@ Reason: Family function`;
   subtitle="Known doctors, shared leave, availability and temporary planning in one place."
 >
   <Button variant="secondary" onclick={() => (pasteOpen = true)}>
-    <ClipboardPaste size={14} /> Paste from WhatsApp
+    <ClipboardPaste size={14} /> Paste from clipboard
   </Button>
   <Button onclick={exportShared}><Download size={14} /> Export shared data</Button>
 </PageHeader>

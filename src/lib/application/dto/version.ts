@@ -20,6 +20,7 @@ export interface ExportOptions {
   year?: number;
   label?: string;
   approvedOnly?: boolean;
+  sharedLeaveIds?: string[];
 }
 
 export interface ImportSummaryLine {

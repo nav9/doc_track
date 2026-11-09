@@ -7,7 +7,7 @@
  * to IndexedDB or the engines directly.
  */
 import { AppServices } from '../application/services/appServices';
-import { messageOf } from '../application/services/errors';
+import { describeError, messageOf } from '../application/services/errors';
 import type { DataSnapshot } from '../application/dto/snapshot';
 import { emptySnapshot } from '../application/dto/snapshot';
 import type { AppSettings } from '../domain/settings/types';
@@ -92,6 +92,7 @@ class AppStore {
       await this.readStorageEstimate();
     } catch (error) {
       this.fatal = messageOf(error);
+      console.error('[DocTrack] Startup failed', error);
     } finally {
       this.loading = false;
     }
@@ -129,8 +130,11 @@ class AppStore {
             )
           : [];
       const message = messageOf(error);
-      this.lastError = { message, reasons };
+      const details = describeError(error);
+      this.lastError = { message, reasons: reasons.length ? reasons : [details] };
       this.notify('error', message);
+      console.error('[DocTrack] Action failed', error);
+      void services.log('ERROR', 'app', message, details);
       return null;
     } finally {
       this.busy = false;

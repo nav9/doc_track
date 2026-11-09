@@ -32,6 +32,8 @@ export interface Envelope {
   app: typeof APP_TAG;
   format: string;
   kind: ExportKind;
+  /** Explicit source/destination section for future import routing. */
+  section: ExportKind;
   label: string;
   createdAt: string;
   appVersion: string;
@@ -83,12 +85,16 @@ async function gunzip(bytes: Uint8Array): Promise<string | null> {
 }
 
 export async function encodeEnvelope(
-  envelope: Omit<Envelope, 'app' | 'format' | 'encoding' | 'createdAt'> & { createdAt?: string }
+  envelope: Omit<Envelope, 'app' | 'format' | 'encoding' | 'section' | 'createdAt'> & {
+    section?: ExportKind;
+    createdAt?: string;
+  }
 ): Promise<string> {
   const header: Omit<Envelope, 'data'> = {
     app: APP_TAG,
     format: FORMAT,
     kind: envelope.kind,
+    section: envelope.kind,
     label: envelope.label,
     createdAt: envelope.createdAt ?? new Date().toISOString(),
     appVersion: envelope.appVersion,
@@ -146,8 +152,12 @@ async function decodeChunk(chunk: string): Promise<Envelope> {
     !header.kind ||
     !['full', 'leave', 'policy', 'roster', 'holidays', 'multiuser', 'events'].includes(header.kind)
   ) {
-    throw new Error('The data block does not declare a supported data kind.');
+    throw new Error('The data block does not declare a supported data section.');
   }
+  if (header.section && header.section !== header.kind) {
+    throw new Error('The data block section does not match its declared data kind.');
+  }
+  header.section = header.kind;
   if (typeof header.createdAt !== 'string') {
     throw new Error('The data block is missing its creation date.');
   }
@@ -359,12 +369,27 @@ export function normalizeSnapshotData(
     });
   }
 
-  if (kind === 'full' || kind === 'multiuser') {
+  if (kind === 'full' || kind === 'holidays') {
+    take('holidayNames', (record) => {
+      const id = recordId(record, 'holidayname');
+      if (!id || !str(record.name).trim()) return null;
+      return {
+        id,
+        name: str(record.name).trim(),
+        useCount: num(record.useCount, 1),
+        createdAt: str(record.createdAt, new Date().toISOString()),
+        updatedAt: str(record.updatedAt, new Date().toISOString())
+      };
+    });
+  }
+
+  if (kind === 'full' || kind === 'multiuser' || kind === 'roster') {
     take('doctors', (record) => {
       const id = recordId(record, 'doctor');
       if (!id) return null;
       return {
         id,
+        prefix: str(record.prefix, 'Dr. '),
         name: str(record.name),
         employeeId: str(record.employeeId),
         department: str(record.department),
@@ -598,6 +623,22 @@ export function normalizeSnapshotData(
         updatedAt: str(record.updatedAt, new Date().toISOString())
       };
     });
+    if (snapshot.holidayNames.length === 0) {
+      const now = new Date().toISOString();
+      const seen = new Set<string>();
+      for (const holiday of snapshot.holidays) {
+        const key = holiday.name.trim().toLowerCase();
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        snapshot.holidayNames.push({
+          id: `holidayname_${key.replace(/[^a-z0-9]+/g, '-')}`,
+          name: holiday.name.trim(),
+          useCount: 1,
+          createdAt: now,
+          updatedAt: now
+        });
+      }
+    }
   }
 
   if (kind === 'full' || kind === 'roster') {
@@ -631,6 +672,10 @@ export function normalizeSnapshotData(
           | 'EEE, dd MMM yyyy'
           | 'dd MMM yyyy (EEE)'
           | 'dd-MM-yyyy',
+        fontFamily: (['helvetica', 'times', 'courier'].includes(str(record.fontFamily))
+          ? str(record.fontFamily)
+          : 'helvetica') as 'helvetica' | 'times' | 'courier',
+        fontSize: Math.max(7, Math.min(12, num(record.fontSize, 8))),
         showLeaveWarnings: record.showLeaveWarnings !== false,
         leaveWarningStatuses: (Array.isArray(record.leaveWarningStatuses)
           ? record.leaveWarningStatuses
